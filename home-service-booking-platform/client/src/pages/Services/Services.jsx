@@ -1,9 +1,7 @@
+import ServiceGrid from "../../components/service/ServiceGrid";
+
 function Services() {
-  return (
-    <div>
-      <h1>Services Page</h1>
-    </div>
-  );
+  return <ServiceGrid />;
 }
 
 export default Services;

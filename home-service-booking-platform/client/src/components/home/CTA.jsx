@@ -1,17 +1,21 @@
 function CTA() {
   return (
-    <section className="bg-blue-600 text-white py-16 text-center">
-      <h2 className="text-4xl font-bold mb-4">
-        Ready to Book a Service?
-      </h2>
+    <section className="bg-orange-500 text-white py-20">
+      <div className="max-w-5xl mx-auto text-center">
 
-      <p className="mb-8">
-        Trusted professionals at your doorstep.
-      </p>
+        <h2 className="text-4xl font-bold mb-6">
+          Ready to Book a Service?
+        </h2>
 
-      <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold">
-        Book Now
-      </button>
+        <p className="mb-8 text-lg">
+          Book trusted professionals for your home today.
+        </p>
+
+        <button className="bg-white text-orange-500 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+          Book Now
+        </button>
+
+      </div>
     </section>
   );
 }

@@ -1,45 +1,65 @@
 import { NavLink } from "react-router-dom";
+import logo from "../../assets/logos/truefix-logo.jpg";
 
 function Navbar() {
-  const navLinkStyle = ({ isActive }) =>
-    isActive
-      ? "text-blue-600 font-semibold"
-      : "text-gray-700 hover:text-blue-600 transition";
-
   return (
-    <header className="bg-white shadow-md">
-      <nav className="max-w-7xl mx-auto flex items-center justify-between px-8 py-4">
-        <h1 className="text-3xl font-bold text-blue-600">
-          TrueFix
-        </h1>
+    <nav className="bg-white shadow-md px-6 py-4 flex items-center justify-between">
 
-        <div className="flex gap-8">
-          <NavLink to="/" className={navLinkStyle}>
-            Home
-          </NavLink>
+      {/* Logo + TrueFix Name */}
+      <NavLink to="/" className="flex items-center gap-2">
+        <img
+          src={logo}
+          alt="TrueFix Logo"
+          className="h-14 w-auto"
+        />
 
-          <NavLink to="/services" className={navLinkStyle}>
-            Services
-          </NavLink>
+        <span className="text-6xl font-bold">
+          <span className="text-blue-900">True</span>
+          <span className="text-orange-500">Fix</span>
+        </span>
+      </NavLink>
 
-          <NavLink to="/bookings" className={navLinkStyle}>
-            Bookings
-          </NavLink>
+      {/* Navigation Links */}
+      <div className="flex items-center gap-6">
 
-          <NavLink to="/login" className={navLinkStyle}>
-            Login
-          </NavLink>
+        <NavLink
+          to="/"
+          className="text-blue-900 font-medium hover:text-orange-600"
+        >
+          Home
+        </NavLink>
 
-          <NavLink to="/register" className={navLinkStyle}>
-            Register
-          </NavLink>
-        </div>
+        <NavLink
+          to="/services"
+          className="text-blue-900 font-medium hover:text-orange-600"
+        >
+          Services
+        </NavLink>
 
-        <button className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">
-          Book Service
-        </button>
-      </nav>
-    </header>
+        <NavLink
+          to="/bookings"
+          className="text-blue-900 font-medium hover:text-orange-600"
+        >
+          Bookings
+        </NavLink>
+
+        <NavLink
+          to="/login"
+          className="text-blue-900 font-medium hover:text-orange-600"
+        >
+          Login
+        </NavLink>
+
+        <NavLink
+          to="/register"
+          className="bg-orange-500 text-white px-5 py-2 rounded-lg font-medium hover:bg-orange-600"
+        >
+          Register
+        </NavLink>
+
+      </div>
+
+    </nav>
   );
 }
 

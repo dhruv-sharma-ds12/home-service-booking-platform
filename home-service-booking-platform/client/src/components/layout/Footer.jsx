@@ -1,9 +1,13 @@
+import { NavLink } from "react-router-dom";
 function Footer() {
   return (
     <footer className="bg-gray-900 text-white py-8 mt-20">
       <div className="max-w-7xl mx-auto px-6 flex justify-between">
         <div>
-          <h2 className="text-2xl font-bold">TrueFix</h2>
+          <span className="text-6xl font-bold">
+          <span className="text-blue-900">True</span>
+          <span className="text-orange-500">Fix</span>
+        </span>
           <p className="mt-3 text-gray-400">
             Trusted Home Services at Your Doorstep.
           </p>
@@ -21,7 +25,7 @@ function Footer() {
         <div>
           <h3 className="font-semibold mb-3">Contact</h3>
           <p>support@truefix.com</p>
-          <p>+91 9876543210</p>
+          <p>+91 8307355247</p>
         </div>
       </div>
 

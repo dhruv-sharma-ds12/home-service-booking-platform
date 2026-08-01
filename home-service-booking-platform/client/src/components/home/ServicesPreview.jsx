@@ -1,30 +1,24 @@
-function ServicesPreview() {
-  const services = [
-    "Electrician",
-    "Plumber",
-    "AC Repair",
-    "House Cleaning",
-    "Carpenter",
-    "Painting",
-  ];
+import services from "../../data/services";
+import ServiceCard from "../service/ServiceCard";
 
+function ServicesPreview() {
   return (
-    <section className="py-16 bg-gray-100">
+    <section className="bg-gray-100 py-16">
       <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-4xl font-bold text-center mb-10">
+
+        <h2 className="text-4xl font-bold text-center mb-12">
           Popular Services
         </h2>
 
-        <div className="grid grid-cols-3 gap-6">
-          {services.map((service) => (
-            <div
-              key={service}
-              className="bg-white shadow-lg rounded-xl p-6 text-center hover:shadow-xl transition"
-            >
-              <h3 className="text-xl font-semibold">{service}</h3>
-            </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {services.slice(0, 6).map((service) => (
+            <ServiceCard
+              key={service.id}
+              service={service}
+            />
           ))}
         </div>
+
       </div>
     </section>
   );

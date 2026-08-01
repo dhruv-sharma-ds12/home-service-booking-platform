@@ -1,18 +1,49 @@
+import heroImage from "../../assets/images/hero-image.png";
+
 function Hero() {
   return (
-    <section className="bg-blue-600 text-white py-24">
-      <div className="max-w-7xl mx-auto px-6">
-        <h1 className="text-5xl font-bold mb-6">
-          Book Trusted Home Services
-        </h1>
+    <section className="bg-blue-800 text-white py-20">
+      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 items-center gap-12">
 
-        <p className="text-xl mb-8">
-          Electrician, Plumber, AC Repair, Cleaning and more.
-        </p>
+        <div>
+          <p className="text-orange-400 font-semibold mb-3">
+            YOUR HOME, OUR RESPONSIBILITY
+          </p>
 
-        <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold">
-          Book Now
-        </button>
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
+            Book Trusted Home Services
+            <span className="block text-orange-400">
+              At Your Doorstep
+            </span>
+          </h1>
+
+          <p className="text-lg text-blue-100 mb-8 max-w-xl">
+            Professional experts for cleaning, repairs, maintenance
+            and other household services.
+          </p>
+
+          <div className="space-y-3 mb-8">
+            <p>✅ Verified Professionals</p>
+            <p>✅ Quick & Reliable Service</p>
+            <p>✅ Affordable Pricing</p>
+            <p>✅ Cash on Delivery</p>
+          </div>
+
+          <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-7 py-3 rounded-lg transition">
+            Book a Service
+          </button>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="bg-white p-3 rounded-2xl shadow-xl">
+            <img
+              src={heroImage}
+              alt="TrueFix Home Services"
+              className="w-full max-w-lg rounded-xl object-cover"
+            />
+          </div>
+        </div>
+
       </div>
     </section>
   );
