@@ -4,15 +4,15 @@ import Footer from "./Footer";
 
 function Layout() {
   return (
-    <>
+    <div className="w-full min-w-0 overflow-x-hidden">
       <Navbar />
 
-      <main>
+      <main className="w-full min-w-0">
         <Outlet />
       </main>
 
       <Footer />
-    </>
+    </div>
   );
 }
 

@@ -24,7 +24,7 @@ function WhyChooseUs() {
     },
     {
       icon: <FaMoneyBillWave className="text-4xl text-orange-500" />,
-      title: "Cash on Delivery",
+      title: "Pay After Service",
       desc: "Pay conveniently in cash after your service is completed."
     }
   ];
@@ -40,10 +40,10 @@ function WhyChooseUs() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
 
           {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-gray-100 rounded-xl p-6 text-center shadow hover:shadow-lg transition"
-            >
+        <div
+         key={index}
+         className="bg-gray-100 rounded-xl p-6 text-center shadow hover:shadow-lg transition-transform hover:scale-105"
+        >
               <div className="flex justify-center mb-4">
                 {feature.icon}
               </div>
