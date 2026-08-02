@@ -1,8 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import heroImage from "../../assets/images/hero-image.png";
 
 function Hero() {
+  const navigate = useNavigate();
+
   return (
-    <section className="bg-blue-800 text-white py-20">
+    <section className="bg-blue-800 text-white py-12">
       <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 items-center gap-12">
 
         <div>
@@ -26,10 +29,12 @@ function Hero() {
             <p>✅ Verified Professionals</p>
             <p>✅ Quick & Reliable Service</p>
             <p>✅ Affordable Pricing</p>
-            <p>✅ Cash on Delivery</p>
+            <p>✅ Pay After Service</p>
           </div>
 
-          <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-7 py-3 rounded-lg transition">
+          <button
+            onClick={() => navigate("/services")}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-7 py-3 rounded-xl shadow hover:shadow-lg transition-transform hover:scale-105">
             Book a Service
           </button>
         </div>

@@ -10,7 +10,7 @@ function ServicesPreview() {
           Popular Services
         </h2>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 ">
           {services.slice(0, 6).map((service) => (
             <ServiceCard
               key={service.id}
