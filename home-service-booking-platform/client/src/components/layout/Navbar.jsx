@@ -64,7 +64,7 @@ function Navbar() {
               className="h-10 sm:h-12 lg:h-14 w-auto object-contain"
             />
 
-            <span className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+            <span className="text-2xl sm:text-3xl lg:text-5xl font-bold">
               <span className="text-blue-900">
                 True
               </span>
@@ -180,7 +180,7 @@ function Navbar() {
 
                 <NavLink
                   to="/register"
-                  className="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-orange-600 transition"
+                  className="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-orange-600 shadow hover:shadow-lg transition-transform hover:scale-105"
                 >
                   Register
                 </NavLink>
