@@ -8,14 +8,17 @@ import painting from "../assets/images/painting.jpg";
 import salonSpa from "../assets/images/salon-spa.jpg";
 import laundry from "../assets/images/laundry.jpg";
 import gardening from "../assets/images/gardening.jpg";
+import smartHomeImage from "../assets/images/smart-home-services.jpg";
 import packersMovers from "../assets/images/packers-movers.jpg";
+
 const services = [
   {
     id: 1,
     name: "Home Cleaning",
     price: 499,
     image: homeCleaning,
-    description: "Professional cleaning services for your home."
+    description:
+      "Professional home cleaning for bedrooms, living areas, kitchens, bathrooms, and other spaces to keep your home fresh, hygienic, and comfortable.",
   },
 
   {
@@ -23,7 +26,8 @@ const services = [
     name: "AC & Appliance Repair",
     price: 399,
     image: acRepair,
-    description: "Reliable AC and appliance repair services."
+    description:
+      "Reliable repair and maintenance for ACs and household appliances, including inspection, troubleshooting, servicing, and basic repairs.",
   },
 
   {
@@ -31,7 +35,8 @@ const services = [
     name: "Plumbing",
     price: 299,
     image: plumbing,
-    description: "Professional plumbing services for your home."
+    description:
+      "Professional plumbing assistance for leaking taps, blocked drains, pipe issues, fittings, water connections, and other common household problems.",
   },
 
   {
@@ -39,7 +44,8 @@ const services = [
     name: "Electrical Work",
     price: 299,
     image: electrical,
-    description: "Safe and reliable electrical services."
+    description:
+      "Safe electrical services for switches, sockets, lights, wiring issues, fans, fixtures, and other common electrical requirements at home.",
   },
 
   {
@@ -47,7 +53,8 @@ const services = [
     name: "Carpentry",
     price: 399,
     image: carpentry,
-    description: "Furniture repair and carpentry services."
+    description:
+      "Skilled carpentry services for furniture repair, installation, fittings, shelves, doors, cabinets, and other household carpentry work.",
   },
 
   {
@@ -55,7 +62,8 @@ const services = [
     name: "Pest Control",
     price: 599,
     image: pestControl,
-    description: "Effective pest control for your home."
+    description:
+      "Professional pest control solutions to help manage common household pests such as cockroaches, ants, mosquitoes, termites, and other unwanted insects.",
   },
 
   {
@@ -63,7 +71,8 @@ const services = [
     name: "Painting",
     price: 999,
     image: painting,
-    description: "Professional home painting services."
+    description:
+      "Professional interior and exterior painting services with surface preparation and careful application to give your home a clean and refreshed appearance.",
   },
 
   {
@@ -71,7 +80,8 @@ const services = [
     name: "Salon & Spa at Home",
     price: 499,
     image: salonSpa,
-    description: "Salon and spa services at your doorstep."
+    description:
+      "Convenient salon and spa services at your doorstep, including grooming, beauty, relaxation, and personal care services from the comfort of your home.",
   },
 
   {
@@ -79,7 +89,8 @@ const services = [
     name: "Laundry & Ironing",
     price: 199,
     image: laundry,
-    description: "Convenient laundry and ironing services."
+    description:
+      "Convenient laundry and ironing assistance for everyday clothing and household fabrics, helping you save time and keep your clothes fresh and ready.",
   },
 
   {
@@ -87,7 +98,17 @@ const services = [
     name: "Gardening",
     price: 299,
     image: gardening,
-    description: "Professional gardening and plant care."
+    description:
+      "Home gardening and plant-care services including basic maintenance, trimming, cleaning, watering assistance, and general garden upkeep.",
+  },
+
+  {
+    id: 11,
+    name: "Smart Home Services",
+    price: 999,
+    image: smartHomeImage,
+    description:
+      "Professional installation and setup of smart home devices such as smart locks, security systems, sensors, connected appliances, and home automation equipment.",
   },
 
   {
@@ -95,8 +116,9 @@ const services = [
     name: "Packers & Movers",
     price: 1499,
     image: packersMovers,
-    description: "Safe and reliable packing and moving services."
-  }
+    description:
+      "Reliable packing and moving assistance for household relocation, including careful packing, handling, transportation, and organized movement of your belongings.",
+  },
 ];
 
 export default services;
