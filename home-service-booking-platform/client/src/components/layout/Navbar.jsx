@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FaBars, FaTimes } from "react-icons/fa";
+import { FaBars, FaTimes, FaUserCircle } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/logos/truefix-logo.jpg";
 
@@ -21,32 +21,53 @@ function Navbar() {
     navigate("/");
   };
 
-  // Desktop navigation styling
+  /* =========================
+     DESKTOP NAVIGATION STYLE
+  ========================= */
+
   const desktopLinkStyle = ({ isActive }) =>
-    `font-medium transition ${
+    `group relative font-medium py-2 transition-colors duration-200 ${
       isActive
         ? "text-orange-500"
-        : "text-blue-900 hover:text-orange-600"
+        : "text-blue-950 hover:text-orange-500"
+    }
+
+    after:absolute
+    after:left-0
+    after:-bottom-1
+    after:h-[2px]
+    after:bg-orange-500
+    after:rounded-full
+    after:transition-all
+    after:duration-300
+
+    ${
+      isActive
+        ? "after:w-full"
+        : "after:w-0 hover:after:w-full"
     }`;
 
-  // Mobile navigation styling
+  /* =========================
+     MOBILE NAVIGATION STYLE
+  ========================= */
+
   const mobileLinkStyle = ({ isActive }) =>
-    `px-3 py-2 rounded-lg font-medium transition ${
+    `px-4 py-2.5 rounded-lg font-medium transition ${
       isActive
         ? "bg-orange-50 text-orange-500"
-        : "text-blue-900 hover:bg-gray-50"
+        : "text-blue-950 hover:bg-gray-50 hover:text-orange-500"
     }`;
 
   return (
-    <nav className="bg-white shadow-md relative z-50">
+    <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
 
       <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* =========================
-            TOP NAVBAR
+            MAIN NAVBAR
         ========================= */}
 
-        <div className="flex items-center justify-between min-h-20">
+        <div className="flex items-center justify-between min-h-[76px]">
 
           {/* =========================
               LOGO
@@ -61,17 +82,19 @@ function Navbar() {
             <img
               src={logo}
               alt="TrueFix Logo"
-              className="h-10 sm:h-12 lg:h-14 w-auto object-contain"
+              className="h-12 sm:h-12 w-auto object-contain"
             />
 
-            <span className="text-2xl sm:text-3xl lg:text-5xl font-bold">
-              <span className="text-blue-900">
+            <span className="text-2xl sm:text-6xl font-bold tracking-tight">
+
+              <span className="text-blue-950">
                 True
               </span>
 
               <span className="text-orange-500">
                 Fix
               </span>
+
             </span>
 
           </NavLink>
@@ -81,87 +104,54 @@ function Navbar() {
               DESKTOP NAVIGATION
           ========================= */}
 
-          <div className="hidden md:flex items-center gap-5 lg:gap-7">
+          <div className="hidden md:flex items-center">
 
-            {/* Home */}
+            {/* =========================
+                MAIN PAGES
+            ========================= */}
 
-            <NavLink
-              to="/"
-              className={desktopLinkStyle}
-            >
-              Home
-            </NavLink>
+            <div className="flex items-center gap-6 lg:gap-8">
 
+              <NavLink
+                to="/"
+                className={desktopLinkStyle}
+              >
+                Home
+              </NavLink>
 
-            {/* About */}
+              <NavLink
+                to="/about"
+                className={desktopLinkStyle}
+              >
+                About
+              </NavLink>
 
-            <NavLink
-              to="/about"
-              className={desktopLinkStyle}
-            >
-              About
-            </NavLink>
+              <NavLink
+                to="/contact"
+                className={desktopLinkStyle}
+              >
+                Contact
+              </NavLink>
 
-            {/* Contact */}
+              <NavLink
+                to="/services"
+                className={desktopLinkStyle}
+              >
+                Services
+              </NavLink>
 
-            <NavLink
-              to="/contact"
-              className={desktopLinkStyle}
-            >
-              Contact
-            </NavLink>
-
-            {/* Services */}
-
-            <NavLink
-              to="/services"
-              className={desktopLinkStyle}
-            >
-              Services
-            </NavLink>
+            </div>
 
 
             {/* =========================
-                CUSTOMER NAVIGATION
+                SEPARATOR
             ========================= */}
 
-            {isAuthenticated &&
-              user?.role === "customer" && (
-                <>
+            <div className="flex items-center mx-7 lg:mx-9">
 
-                  <NavLink
-                    to="/my-bookings"
-                    className={desktopLinkStyle}
-                  >
-                    My Bookings
-                  </NavLink>
+              <div className="w-px h-7 bg-gray-200"></div>
 
-                  <NavLink
-                    to="/profile"
-                    className={desktopLinkStyle}
-                  >
-                    Profile
-                  </NavLink>
-
-                </>
-              )}
-
-
-            {/* =========================
-                ADMIN NAVIGATION
-            ========================= */}
-
-            {isAuthenticated &&
-              user?.role === "admin" && (
-
-                <NavLink
-                  to="/admin"
-                  className={desktopLinkStyle}
-                >
-                  Admin Dashboard
-                </NavLink>
-
-              )}
+            </div>
 
 
             {/* =========================
@@ -169,23 +159,25 @@ function Navbar() {
             ========================= */}
 
             {!isAuthenticated && (
-              <>
+
+              <div className="flex items-center gap-3">
 
                 <NavLink
                   to="/login"
-                  className={desktopLinkStyle}
+                  className="text-blue-950 font-medium px-4 py-2 rounded-lg hover:bg-gray-50 hover:text-orange-500 transition-all duration-200"
                 >
                   Login
                 </NavLink>
 
                 <NavLink
                   to="/register"
-                  className="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-orange-600 shadow hover:shadow-lg transition-transform hover:scale-105"
+                  className="bg-orange-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:bg-orange-600 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
                 >
                   Register
                 </NavLink>
 
-              </>
+              </div>
+
             )}
 
 
@@ -195,12 +187,68 @@ function Navbar() {
 
             {isAuthenticated && (
 
-              <button
-                onClick={handleLogout}
-                className="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-orange-600 transition"
-              >
-                Logout
-              </button>
+              <div className="flex items-center gap-3">
+
+                {/* Customer Navigation */}
+
+                {user?.role === "customer" && (
+                  <>
+
+                    <NavLink
+                      to="/my-bookings"
+                      className={desktopLinkStyle}
+                    >
+                      My Bookings
+                    </NavLink>
+
+                    <NavLink
+                      to="/profile"
+                      className="group relative flex items-center gap-2 text-blue-950 font-medium px-3 py-2 transition-colors duration-200 hover:text-orange-500"
+                    >
+
+                      <FaUserCircle />
+
+                      Profile
+
+                      {/* Profile underline */}
+
+                      <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-orange-500 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+
+                    </NavLink>
+
+                  </>
+                )}
+
+
+                {/* Admin Navigation */}
+
+                {user?.role === "admin" && (
+
+                  <NavLink
+                    to="/admin"
+                    className={desktopLinkStyle}
+                  >
+                    Admin Dashboard
+                  </NavLink>
+
+                )}
+
+
+                {/* Logout Separator */}
+
+                <div className="h-8 w-px bg-gray-200 mx-2"></div>
+
+
+                {/* Logout */}
+
+                <button
+                  onClick={handleLogout}
+                  className="border border-orange-500 text-orange-500 font-semibold px-5 py-2.5 rounded-xl hover:bg-orange-500 hover:text-white transition-all duration-200"
+                >
+                  Logout
+                </button>
+
+              </div>
 
             )}
 
@@ -213,7 +261,7 @@ function Navbar() {
 
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden text-blue-900 text-2xl p-2"
+            className="md:hidden text-blue-950 text-2xl p-2 rounded-lg hover:bg-gray-100 transition"
             aria-label={
               menuOpen
                 ? "Close navigation menu"
@@ -233,16 +281,16 @@ function Navbar() {
 
 
         {/* =========================
-            MOBILE NAVIGATION
+            MOBILE MENU
         ========================= */}
 
         {menuOpen && (
 
-          <div className="md:hidden border-t border-gray-200 py-4">
+          <div className="md:hidden border-t border-gray-100 py-4">
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
 
-              {/* Home */}
+              {/* Main Pages */}
 
               <NavLink
                 to="/"
@@ -252,9 +300,6 @@ function Navbar() {
                 Home
               </NavLink>
 
-
-              {/* About */}
-
               <NavLink
                 to="/about"
                 onClick={closeMenu}
@@ -263,8 +308,6 @@ function Navbar() {
                 About
               </NavLink>
 
-              {/* Contact */}
-              
               <NavLink
                 to="/contact"
                 onClick={closeMenu}
@@ -272,8 +315,6 @@ function Navbar() {
               >
                 Contact
               </NavLink>
-              
-              {/* Services */}
 
               <NavLink
                 to="/services"
@@ -285,53 +326,14 @@ function Navbar() {
 
 
               {/* =========================
-                  CUSTOMER MOBILE NAVIGATION
+                  MOBILE SEPARATOR
               ========================= */}
 
-              {isAuthenticated &&
-                user?.role === "customer" && (
-                  <>
-
-                    <NavLink
-                      to="/my-bookings"
-                      onClick={closeMenu}
-                      className={mobileLinkStyle}
-                    >
-                      My Bookings
-                    </NavLink>
-
-                    <NavLink
-                      to="/profile"
-                      onClick={closeMenu}
-                      className={mobileLinkStyle}
-                    >
-                      Profile
-                    </NavLink>
-
-                  </>
-                )}
+              <div className="border-t border-gray-100 my-2"></div>
 
 
               {/* =========================
-                  ADMIN MOBILE NAVIGATION
-              ========================= */}
-
-              {isAuthenticated &&
-                user?.role === "admin" && (
-
-                <NavLink
-                  to="/admin"
-                  onClick={closeMenu}
-                  className={mobileLinkStyle}
-                >
-                  Admin Dashboard
-                </NavLink>
-
-              )}
-
-
-              {/* =========================
-                  LOGGED OUT MOBILE
+                  MOBILE LOGGED OUT
               ========================= */}
 
               {!isAuthenticated && (
@@ -348,7 +350,7 @@ function Navbar() {
                   <NavLink
                     to="/register"
                     onClick={closeMenu}
-                    className="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-medium text-center hover:bg-orange-600 transition"
+                    className="bg-orange-500 text-white font-semibold px-4 py-2.5 rounded-lg text-center hover:bg-orange-600 transition"
                   >
                     Register
                   </NavLink>
@@ -358,18 +360,62 @@ function Navbar() {
 
 
               {/* =========================
-                  LOGGED IN MOBILE
+                  MOBILE LOGGED IN
               ========================= */}
 
               {isAuthenticated && (
+                <>
 
-                <button
-                  onClick={handleLogout}
-                  className="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-orange-600 transition"
-                >
-                  Logout
-                </button>
+                  {/* Customer */}
 
+                  {user?.role === "customer" && (
+                    <>
+
+                      <NavLink
+                        to="/my-bookings"
+                        onClick={closeMenu}
+                        className={mobileLinkStyle}
+                      >
+                        My Bookings
+                      </NavLink>
+
+                      <NavLink
+                        to="/profile"
+                        onClick={closeMenu}
+                        className={mobileLinkStyle}
+                      >
+                        Profile
+                      </NavLink>
+
+                    </>
+                  )}
+
+
+                  {/* Admin */}
+
+                  {user?.role === "admin" && (
+
+                    <NavLink
+                      to="/admin"
+                      onClick={closeMenu}
+                      className={mobileLinkStyle}
+                    >
+                      Admin Dashboard
+                    </NavLink>
+
+                  )}
+
+
+                  {/* Logout */}
+
+                  <button
+                    onClick={handleLogout}
+                    className="bg-orange-500 text-white font-semibold px-4 py-2.5 rounded-lg hover:bg-orange-600 transition"
+                  >
+                    Logout
+                  </button>
+
+                </>
               )}
 
             </div>

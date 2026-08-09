@@ -1,30 +1,50 @@
 function About() {
   return (
-    <section className="min-h-screen bg-gray-100 py-16 px-4 sm:px-6">
+    <section className="bg-gray-200 py-16 sm:py-20">
 
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Heading */}
-        <div className="text-center mb-12">
+        {/* =========================
+            PAGE HEADING
+        ========================= */}
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-blue-900">
+        <div className="text-center mb-14">
+
+          <p className="text-orange-500 font-semibold tracking-wide uppercase text-sm mb-3">
             About TrueFix
+          </p>
+
+          <h1 className="text-4xl sm:text-5xl font-bold text-blue-950">
+            Making Home Services
+            <span className="text-orange-500"> Simple</span>
           </h1>
 
-          <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
+          <p className="text-gray-600 mt-5 max-w-2xl mx-auto leading-7">
             Reliable home services, trusted professionals, and convenient
             bookings — all in one place.
           </p>
 
         </div>
 
-        {/* About Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
 
-          {/* Left */}
-          <div className="bg-white rounded-2xl shadow-md p-8">
+        {/* =========================
+            ABOUT CONTENT
+        ========================= */}
 
-            <h2 className="text-2xl font-bold text-blue-900 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
+
+
+          {/* =========================
+              LEFT CONTENT
+          ========================= */}
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-7 sm:p-9 hover:shadow-lg transition-all duration-300">
+
+            <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-2xl mb-6">
+              🏠
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-bold text-blue-950 mb-5">
               What is TrueFix?
             </h2>
 
@@ -42,63 +62,106 @@ function About() {
 
           </div>
 
-          {/* Right */}
+
+          {/* =========================
+              FEATURES
+          ========================= */}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <div className="text-3xl mb-3">🛠️</div>
+            {/* Trusted Services */}
 
-              <h3 className="font-bold text-blue-900 text-lg">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+
+              <div className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center text-2xl mb-4">
+                🛠️
+              </div>
+
+              <h3 className="font-bold text-blue-950 text-lg">
                 Trusted Services
               </h3>
 
-              <p className="text-gray-600 text-sm mt-2">
+              <p className="text-gray-600 text-sm mt-2 leading-6">
                 Connect with professionals for essential home services.
               </p>
+
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <div className="text-3xl mb-3">📅</div>
 
-              <h3 className="font-bold text-blue-900 text-lg">
+            {/* Easy Booking */}
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+
+              <div className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center text-2xl mb-4">
+                📅
+              </div>
+
+              <h3 className="font-bold text-blue-950 text-lg">
                 Easy Booking
               </h3>
 
-              <p className="text-gray-600 text-sm mt-2">
+              <p className="text-gray-600 text-sm mt-2 leading-6">
                 Select a service and schedule it at your convenience.
               </p>
+
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <div className="text-3xl mb-3">💰</div>
 
-              <h3 className="font-bold text-blue-900 text-lg">
+            {/* Transparent Pricing */}
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+
+              <div className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center text-2xl mb-4">
+                💰
+              </div>
+
+              <h3 className="font-bold text-blue-950 text-lg">
                 Transparent Pricing
               </h3>
 
-              <p className="text-gray-600 text-sm mt-2">
+              <p className="text-gray-600 text-sm mt-2 leading-6">
                 View service prices before confirming your booking.
               </p>
+
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <div className="text-3xl mb-3">📱</div>
 
-              <h3 className="font-bold text-blue-900 text-lg">
+            {/* Convenient Management */}
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+
+              <div className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center text-2xl mb-4">
+                📱
+              </div>
+
+              <h3 className="font-bold text-blue-950 text-lg">
                 Convenient Management
               </h3>
 
-              <p className="text-gray-600 text-sm mt-2">
+              <p className="text-gray-600 text-sm mt-2 leading-6">
                 Keep track of your bookings through your TrueFix account.
               </p>
+
             </div>
 
           </div>
 
         </div>
 
-        {/* Mission */}
-        <div className="bg-blue-900 rounded-2xl shadow-md p-8 sm:p-10 mt-10 text-white text-center">
+
+        {/* =========================
+            MISSION
+        ========================= */}
+
+        <div className="relative overflow-hidden bg-blue-950 rounded-2xl shadow-lg p-8 sm:p-10 mt-10 text-white text-center">
+
+          {/* Orange accent */}
+
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-1 bg-orange-500 rounded-full"></div>
+
+          <p className="text-orange-400 font-semibold text-sm uppercase tracking-wide mb-3">
+            What We Believe
+          </p>
 
           <h2 className="text-2xl sm:text-3xl font-bold">
             Our Mission

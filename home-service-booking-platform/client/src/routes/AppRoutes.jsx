@@ -1,4 +1,8 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
 
 import Layout from "../components/layout/Layout";
 import ProtectedRoute from "../components/common/ProtectedRoute";
@@ -11,38 +15,61 @@ import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
 import Profile from "../pages/Profile/Profile";
 import Bookings from "../pages/Bookings/Bookings";
+import MyBookings from "../pages/MyBookings/MyBookings";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
 import ServiceDetails from "../pages/ServiceDetails/ServiceDetails";
-import MyBookings from "../pages/MyBookings/MyBookings";
+import BookService from "../pages/BookService/BookService";
 
 function AppRoutes() {
   return (
     <BrowserRouter>
+
       <Routes>
 
-        {/* Main Layout */}
+        {/* =========================
+            MAIN LAYOUT
+        ========================= */}
+
         <Route element={<Layout />}>
 
           {/* =========================
               PUBLIC ROUTES
           ========================= */}
 
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
-          <Route path="/about" element={<About />} />
+          <Route
+            path="/about"
+            element={<About />}
+          />
 
-          <Route path="/contact" element={<Contact />} />
+          <Route
+            path="/contact"
+            element={<Contact />}
+          />
 
-          <Route path="/services" element={<Services />} />
+          <Route
+            path="/services"
+            element={<Services />}
+          />
 
           <Route
             path="/services/:id"
             element={<ServiceDetails />}
           />
 
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={<Login />}
+          />
 
-          <Route path="/register" element={<Register />} />
+          <Route
+            path="/register"
+            element={<Register />}
+          />
 
 
           {/* =========================
@@ -76,6 +103,17 @@ function AppRoutes() {
             }
           />
 
+          {/* BOOK SERVICE */}
+
+          <Route
+            path="/book-service"
+            element={
+              <ProtectedRoute role="customer">
+                <BookService />
+              </ProtectedRoute>
+            }
+          />
+
 
           {/* =========================
               ADMIN ROUTE
@@ -93,6 +131,7 @@ function AppRoutes() {
         </Route>
 
       </Routes>
+
     </BrowserRouter>
   );
 }

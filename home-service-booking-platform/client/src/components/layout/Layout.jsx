@@ -1,17 +1,29 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import ScrollToTop from "../common/ScrollToTop";
 
 function Layout() {
+  const location = useLocation();
+
   return (
-    <div className="w-full min-w-0 overflow-x-hidden">
+    <div className="min-h-screen flex flex-col">
+
+      <ScrollToTop />
+
       <Navbar />
 
-      <main className="w-full min-w-0">
-        <Outlet />
+      <main className="w-full min-w-0 flex-1">
+        <div
+          key={location.pathname}
+          className="page-transition"
+        >
+          <Outlet />
+        </div>
       </main>
 
       <Footer />
+
     </div>
   );
 }
