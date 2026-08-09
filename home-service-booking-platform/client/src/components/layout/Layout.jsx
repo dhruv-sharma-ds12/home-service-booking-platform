@@ -7,8 +7,7 @@ function Layout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col">
-
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <ScrollToTop />
 
       <Navbar />
@@ -23,7 +22,6 @@ function Layout() {
       </main>
 
       <Footer />
-
     </div>
   );
 }

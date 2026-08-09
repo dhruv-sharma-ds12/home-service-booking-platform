@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FaBars, FaTimes, FaUserCircle } from "react-icons/fa";
+import {
+  FaBars,
+  FaTimes,
+  FaUserCircle,
+  FaSearch,
+} from "react-icons/fa";
+
 import { useAuth } from "../../context/AuthContext";
+import services from "../../data/services";
 import logo from "../../assets/logos/truefix-logo.jpg";
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const navigate = useNavigate();
 
@@ -21,9 +30,44 @@ function Navbar() {
     navigate("/");
   };
 
-  /* =========================
-     DESKTOP NAVIGATION STYLE
-  ========================= */
+  // =========================
+  // SEARCH
+  // =========================
+
+  const filteredServices =
+    searchTerm.trim().length > 0
+      ? services.filter((service) =>
+          service.name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+        )
+      : [];
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+
+    if (filteredServices.length > 0) {
+      navigate(`/services/${filteredServices[0].id}`);
+
+      setSearchTerm("");
+      setSearchFocused(false);
+      closeMenu();
+    }
+  };
+
+  const handleServiceClick = (serviceId) => {
+    navigate(`/services/${serviceId}`);
+
+    setSearchTerm("");
+    setSearchFocused(false);
+    closeMenu();
+  };
+
+  /*
+   * =========================
+   * DESKTOP NAVIGATION STYLE
+   * =========================
+   */
 
   const desktopLinkStyle = ({ isActive }) =>
     `group relative font-medium py-2 transition-colors duration-200 ${
@@ -47,9 +91,11 @@ function Navbar() {
         : "after:w-0 hover:after:w-full"
     }`;
 
-  /* =========================
-     MOBILE NAVIGATION STYLE
-  ========================= */
+  /*
+   * =========================
+   * MOBILE NAVIGATION STYLE
+   * =========================
+   */
 
   const mobileLinkStyle = ({ isActive }) =>
     `px-4 py-2.5 rounded-lg font-medium transition ${
@@ -61,13 +107,13 @@ function Navbar() {
   return (
     <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
 
-      <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* =========================
             MAIN NAVBAR
         ========================= */}
 
-        <div className="flex items-center justify-between min-h-[76px]">
+        <div className="flex items-center justify-between min-h-[76px] gap-5">
 
           {/* =========================
               LOGO
@@ -78,15 +124,13 @@ function Navbar() {
             onClick={closeMenu}
             className="flex items-center gap-2 shrink-0"
           >
-
             <img
               src={logo}
               alt="TrueFix Logo"
-              className="h-12 sm:h-12 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
 
-            <span className="text-2xl sm:text-6xl font-bold tracking-tight">
-
+            <span className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight whitespace-nowrap">
               <span className="text-blue-950">
                 True
               </span>
@@ -94,23 +138,156 @@ function Navbar() {
               <span className="text-orange-500">
                 Fix
               </span>
-
             </span>
-
           </NavLink>
 
+          {/* =========================
+              DESKTOP SEARCH BAR
+          ========================= */}
+
+          <div className="hidden lg:flex flex-1 justify-center px-4">
+
+            <div className="relative w-full max-w-[420px]">
+
+              <form onSubmit={handleSearch}>
+
+                <div
+                  className={`flex items-center bg-gray-950 border rounded-full px-4 py-2.5 transition-all duration-200 ${
+                    searchFocused
+                      ? "border-orange-400 ring-4 ring-orange-100 bg-white shadow-md"
+                      : "border-gray-200 hover:border-orange-300 hover:shadow-sm"
+                  }`}
+                >
+
+                  <FaSearch
+                    className={`mr-3 transition-colors ${
+                      searchFocused
+                        ? "text-orange-500"
+                        : "text-gray-400"
+                    }`}
+                  />
+
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) =>
+                      setSearchTerm(e.target.value)
+                    }
+                    onFocus={() =>
+                      setSearchFocused(true)
+                    }
+                    placeholder="Search services..."
+                    className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
+                  />
+
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSearchFocused(false);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 text-sm"
+                    >
+                      <FaTimes />
+                    </button>
+                  )}
+
+                </div>
+
+              </form>
+
+              {/* =========================
+                  SEARCH RESULTS
+              ========================= */}
+
+              {searchFocused &&
+                searchTerm.trim() !== "" && (
+
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-[100]">
+
+                    {filteredServices.length > 0 ? (
+
+                      <div className="py-2">
+
+                        {filteredServices.map((service) => (
+
+                          <button
+                            key={service.id}
+                            type="button"
+                            onMouseDown={(e) =>
+                              e.preventDefault()
+                            }
+                            onClick={() =>
+                              handleServiceClick(
+                                service.id
+                              )
+                            }
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-orange-50 transition"
+                          >
+
+                            <img
+                              src={service.image}
+                              alt={service.name}
+                              className="w-12 h-12 rounded-lg object-cover"
+                            />
+
+                            <div className="flex-1 min-w-0">
+
+                              <p className="font-semibold text-blue-950 text-sm">
+                                {service.name}
+                              </p>
+
+                              <p className="text-xs text-gray-500 mt-1">
+                                Professional home service
+                              </p>
+
+                            </div>
+
+                            <span className="text-orange-500 font-semibold text-sm">
+                              ₹{service.price}
+                            </span>
+
+                          </button>
+
+                        ))}
+
+                      </div>
+
+                    ) : (
+
+                      <div className="px-5 py-5 text-center">
+
+                        <FaSearch className="mx-auto text-gray-300 text-xl mb-2" />
+
+                        <p className="text-gray-600 font-medium text-sm">
+                          No services found
+                        </p>
+
+                        <p className="text-gray-400 text-xs mt-1">
+                          Try "cleaning", "plumbing", "AC", etc.
+                        </p>
+
+                      </div>
+
+                    )}
+
+                  </div>
+                )}
+
+            </div>
+
+          </div>
 
           {/* =========================
               DESKTOP NAVIGATION
           ========================= */}
 
-          <div className="hidden md:flex items-center">
+          <div className="hidden md:flex items-center shrink-0">
 
-            {/* =========================
-                MAIN PAGES
-            ========================= */}
+            {/* MAIN PAGES */}
 
-            <div className="flex items-center gap-6 lg:gap-8">
+            <div className="flex items-center gap-5 lg:gap-7">
 
               <NavLink
                 to="/"
@@ -142,21 +319,15 @@ function Navbar() {
 
             </div>
 
+            {/* SEPARATOR */}
 
-            {/* =========================
-                SEPARATOR
-            ========================= */}
+            <div className="flex items-center mx-5 lg:mx-7">
 
-            <div className="flex items-center mx-7 lg:mx-9">
-
-              <div className="w-px h-7 bg-gray-200"></div>
+              <div className="w-px h-7 bg-gray-200" />
 
             </div>
 
-
-            {/* =========================
-                LOGGED OUT
-            ========================= */}
+            {/* LOGGED OUT */}
 
             {!isAuthenticated && (
 
@@ -180,20 +351,16 @@ function Navbar() {
 
             )}
 
-
-            {/* =========================
-                LOGGED IN
-            ========================= */}
+            {/* LOGGED IN */}
 
             {isAuthenticated && (
 
               <div className="flex items-center gap-3">
 
-                {/* Customer Navigation */}
+                {/* CUSTOMER */}
 
                 {user?.role === "customer" && (
                   <>
-
                     <NavLink
                       to="/my-bookings"
                       className={desktopLinkStyle}
@@ -210,17 +377,13 @@ function Navbar() {
 
                       Profile
 
-                      {/* Profile underline */}
-
-                      <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-orange-500 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+                      <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-orange-500 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
 
                     </NavLink>
-
                   </>
                 )}
 
-
-                {/* Admin Navigation */}
+                {/* ADMIN */}
 
                 {user?.role === "admin" && (
 
@@ -233,13 +396,11 @@ function Navbar() {
 
                 )}
 
+                {/* SEPARATOR */}
 
-                {/* Logout Separator */}
+                <div className="h-8 w-px bg-gray-200 mx-2" />
 
-                <div className="h-8 w-px bg-gray-200 mx-2"></div>
-
-
-                {/* Logout */}
+                {/* LOGOUT */}
 
                 <button
                   onClick={handleLogout}
@@ -254,13 +415,12 @@ function Navbar() {
 
           </div>
 
-
-          {/* =========================
-              MOBILE MENU BUTTON
-          ========================= */}
+          {/* MOBILE MENU BUTTON */}
 
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() =>
+              setMenuOpen(!menuOpen)
+            }
             className="md:hidden text-blue-950 text-2xl p-2 rounded-lg hover:bg-gray-100 transition"
             aria-label={
               menuOpen
@@ -279,7 +439,6 @@ function Navbar() {
 
         </div>
 
-
         {/* =========================
             MOBILE MENU
         ========================= */}
@@ -288,9 +447,95 @@ function Navbar() {
 
           <div className="md:hidden border-t border-gray-100 py-4">
 
+            {/* MOBILE SEARCH */}
+
+            <div className="relative mb-4">
+
+              <form onSubmit={handleSearch}>
+
+                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus-within:border-orange-400 focus-within:ring-4 focus-within:ring-orange-100">
+
+                  <FaSearch className="text-gray-400 mr-3" />
+
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) =>
+                      setSearchTerm(e.target.value)
+                    }
+                    onFocus={() =>
+                      setSearchFocused(true)
+                    }
+                    placeholder="Search services..."
+                    className="w-full bg-transparent outline-none text-sm"
+                  />
+
+                </div>
+
+              </form>
+
+              {/* MOBILE RESULTS */}
+
+              {searchFocused &&
+                searchTerm.trim() !== "" && (
+
+                  <div className="mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
+
+                    {filteredServices.length > 0 ? (
+
+                      filteredServices.map(
+                        (service) => (
+
+                          <button
+                            key={service.id}
+                            onClick={() =>
+                              handleServiceClick(
+                                service.id
+                              )
+                            }
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-orange-50"
+                          >
+
+                            <img
+                              src={service.image}
+                              alt={service.name}
+                              className="w-10 h-10 rounded-lg object-cover"
+                            />
+
+                            <div className="flex-1">
+
+                              <p className="font-semibold text-blue-950 text-sm">
+                                {service.name}
+                              </p>
+
+                              <p className="text-xs text-orange-500">
+                                ₹{service.price}
+                              </p>
+
+                            </div>
+
+                          </button>
+
+                        )
+                      )
+
+                    ) : (
+
+                      <p className="text-center text-gray-500 text-sm py-4">
+                        No services found.
+                      </p>
+
+                    )}
+
+                  </div>
+
+                )}
+
+            </div>
+
             <div className="flex flex-col gap-2">
 
-              {/* Main Pages */}
+              {/* MAIN PAGES */}
 
               <NavLink
                 to="/"
@@ -324,21 +569,12 @@ function Navbar() {
                 Services
               </NavLink>
 
+              <div className="border-t border-gray-100 my-2" />
 
-              {/* =========================
-                  MOBILE SEPARATOR
-              ========================= */}
-
-              <div className="border-t border-gray-100 my-2"></div>
-
-
-              {/* =========================
-                  MOBILE LOGGED OUT
-              ========================= */}
+              {/* LOGGED OUT */}
 
               {!isAuthenticated && (
                 <>
-
                   <NavLink
                     to="/login"
                     onClick={closeMenu}
@@ -354,23 +590,16 @@ function Navbar() {
                   >
                     Register
                   </NavLink>
-
                 </>
               )}
 
-
-              {/* =========================
-                  MOBILE LOGGED IN
-              ========================= */}
+              {/* LOGGED IN */}
 
               {isAuthenticated && (
                 <>
 
-                  {/* Customer */}
-
                   {user?.role === "customer" && (
                     <>
-
                       <NavLink
                         to="/my-bookings"
                         onClick={closeMenu}
@@ -386,15 +615,10 @@ function Navbar() {
                       >
                         Profile
                       </NavLink>
-
                     </>
                   )}
 
-
-                  {/* Admin */}
-
                   {user?.role === "admin" && (
-
                     <NavLink
                       to="/admin"
                       onClick={closeMenu}
@@ -402,11 +626,7 @@ function Navbar() {
                     >
                       Admin Dashboard
                     </NavLink>
-
                   )}
-
-
-                  {/* Logout */}
 
                   <button
                     onClick={handleLogout}

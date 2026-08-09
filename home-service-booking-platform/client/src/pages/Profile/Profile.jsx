@@ -52,7 +52,7 @@ function Profile() {
 
   if (!isAuthenticated || !user) {
     return (
-      <section className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+      <section className="min-h-screen bg-gray-200 flex items-center justify-center px-4">
         <div className="bg-white rounded-xl shadow-md p-8 text-center max-w-md w-full">
           <h1 className="text-2xl font-bold text-blue-900">
             Please Login
@@ -82,7 +82,7 @@ function Profile() {
     .toUpperCase();
 
   return (
-    <section className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6">
+    <section className="min-h-screen bg-gray-200 py-12 px-4 sm:px-6">
 
       <div className="max-w-4xl mx-auto">
 
