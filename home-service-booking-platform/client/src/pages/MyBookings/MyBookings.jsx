@@ -1,46 +1,92 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 function MyBookings() {
-  // Temporary data.
-  // This will later come from MongoDB through the backend API.
-  const bookings = [
-    {
-      id: "TF001",
-      service: "Home Cleaning",
-      date: "15 August 2026",
-      time: "10:00 AM",
-      address: "Karnal, Haryana",
-      price: 799,
-      status: "Confirmed"
-    },
-    {
-      id: "TF002",
-      service: "AC Repair",
-      date: "18 August 2026",
-      time: "2:00 PM",
-      address: "Karnal, Haryana",
-      price: 499,
-      status: "Pending"
-    },
-    {
-      id: "TF003",
-      service: "Plumbing",
-      date: "10 August 2026",
-      time: "11:30 AM",
-      address: "Karnal, Haryana",
-      price: 399,
-      status: "Completed"
-    },
-    {
-      id: "TF004",
-      service: "Electrical Work",
-      date: "5 August 2026",
-      time: "4:00 PM",
-      address: "Karnal, Haryana",
-      price: 299,
-      status: "Cancelled"
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(
+        "http://localhost:5001/api/bookings"
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to load bookings"
+        );
+      }
+
+      setBookings(data);
+
+    } catch (error) {
+      console.error("Fetch bookings error:", error);
+
+      setError(
+        error.message || "Unable to load bookings."
+      );
+
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const cancelBooking = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this booking?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5001/api/bookings/${id}/cancel`,
+        {
+          method: "PATCH",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to cancel booking"
+        );
+      }
+
+      // Update UI immediately
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking._id === id
+            ? {
+                ...booking,
+                status: "Cancelled",
+              }
+            : booking
+        )
+      );
+
+    } catch (error) {
+      console.error("Cancel booking error:", error);
+
+      alert(
+        error.message ||
+        "Unable to cancel booking."
+      );
+    }
+  };
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -59,14 +105,27 @@ function MyBookings() {
     }
   };
 
+  if (loading) {
+    return (
+      <section className="min-h-screen bg-gray-50 py-16">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <div className="text-4xl mb-4">⏳</div>
+
+          <h1 className="text-2xl font-bold text-blue-900">
+            Loading bookings...
+          </h1>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6">
+    <section className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-5xl mx-auto px-4">
 
-      <div className="max-w-6xl mx-auto">
+        {/* HEADER */}
 
-        {/* Header */}
         <div className="text-center mb-10">
-
           <h1 className="text-3xl sm:text-4xl font-bold text-blue-900">
             My Bookings
           </h1>
@@ -74,10 +133,18 @@ function MyBookings() {
           <p className="text-gray-600 mt-2">
             View and manage your TrueFix service bookings
           </p>
-
         </div>
 
-        {/* Booking Summary */}
+        {/* ERROR */}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* SUMMARY */}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 
           <div className="bg-white rounded-xl shadow p-5 text-center">
@@ -94,7 +161,8 @@ function MyBookings() {
             <p className="text-2xl font-bold text-yellow-500">
               {
                 bookings.filter(
-                  (booking) => booking.status === "Pending"
+                  (booking) =>
+                    booking.status === "Pending"
                 ).length
               }
             </p>
@@ -108,7 +176,8 @@ function MyBookings() {
             <p className="text-2xl font-bold text-green-600">
               {
                 bookings.filter(
-                  (booking) => booking.status === "Confirmed"
+                  (booking) =>
+                    booking.status === "Confirmed"
                 ).length
               }
             </p>
@@ -119,25 +188,26 @@ function MyBookings() {
           </div>
 
           <div className="bg-white rounded-xl shadow p-5 text-center">
-            <p className="text-2xl font-bold text-blue-600">
+            <p className="text-2xl font-bold text-red-600">
               {
                 bookings.filter(
-                  (booking) => booking.status === "Completed"
+                  (booking) =>
+                    booking.status === "Cancelled"
                 ).length
               }
             </p>
 
             <p className="text-gray-500 text-sm mt-1">
-              Completed
+              Cancelled
             </p>
           </div>
 
         </div>
 
-        {/* Bookings */}
+        {/* EMPTY */}
+
         {bookings.length === 0 ? (
 
-          /* Empty State */
           <div className="bg-white rounded-xl shadow-md p-10 text-center">
 
             <div className="text-5xl mb-4">
@@ -154,7 +224,7 @@ function MyBookings() {
 
             <Link
               to="/services"
-              className="inline-block bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
+              className="inline-block bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600"
             >
               Book a Service
             </Link>
@@ -168,17 +238,19 @@ function MyBookings() {
             {bookings.map((booking) => (
 
               <div
-                key={booking.id}
+                key={booking._id}
                 className="bg-white rounded-xl shadow-md p-5 sm:p-6"
               >
 
-                {/* Booking Header */}
+                {/* TOP */}
+
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
                   <div>
 
                     <p className="text-sm text-gray-500">
-                      Booking ID: {booking.id}
+                      Booking ID:{" "}
+                      TF{booking._id.slice(-6).toUpperCase()}
                     </p>
 
                     <h2 className="text-xl sm:text-2xl font-bold text-blue-900 mt-1">
@@ -197,7 +269,8 @@ function MyBookings() {
 
                 </div>
 
-                {/* Details */}
+                {/* DETAILS */}
+
                 <div className="border-t border-gray-200 mt-5 pt-5">
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -246,97 +319,32 @@ function MyBookings() {
 
                 </div>
 
-                {/* Status Progress */}
-                <div className="border-t border-gray-200 mt-5 pt-5">
+                {/* ACTIONS */}
 
-                  <p className="text-sm font-semibold text-gray-700 mb-4">
-                    Booking Status
-                  </p>
-
-                  <div className="flex items-center">
-
-                    {/* Pending */}
-                    <div className="flex flex-col items-center">
-
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                          ["Pending", "Confirmed", "Completed"].includes(
-                            booking.status
-                          )
-                            ? "bg-orange-500"
-                            : "bg-gray-300"
-                        }`}
-                      >
-                        1
-                      </div>
-
-                      <span className="text-xs text-gray-500 mt-2">
-                        Pending
-                      </span>
-
-                    </div>
-
-                    <div className="flex-1 h-1 bg-gray-200 mx-2"></div>
-
-                    {/* Confirmed */}
-                    <div className="flex flex-col items-center">
-
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                          ["Confirmed", "Completed"].includes(
-                            booking.status
-                          )
-                            ? "bg-orange-500"
-                            : "bg-gray-300"
-                        }`}
-                      >
-                        2
-                      </div>
-
-                      <span className="text-xs text-gray-500 mt-2">
-                        Confirmed
-                      </span>
-
-                    </div>
-
-                    <div className="flex-1 h-1 bg-gray-200 mx-2"></div>
-
-                    {/* Completed */}
-                    <div className="flex flex-col items-center">
-
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                          booking.status === "Completed"
-                            ? "bg-green-500"
-                            : "bg-gray-300"
-                        }`}
-                      >
-                        3
-                      </div>
-
-                      <span className="text-xs text-gray-500 mt-2">
-                        Completed
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                {/* Actions */}
                 <div className="border-t border-gray-200 mt-5 pt-5 flex flex-col sm:flex-row gap-3">
 
                   <Link
                     to="/services"
-                    className="text-center bg-blue-900 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-800 transition"
+                    className="text-center bg-blue-900 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-800"
                   >
                     Book Another Service
                   </Link>
 
+                  {booking.status !== "Cancelled" &&
+                    booking.status !== "Completed" && (
+                      <button
+                        onClick={() =>
+                          cancelBooking(booking._id)
+                        }
+                        className="bg-red-500 text-white px-5 py-3 rounded-lg font-semibold hover:bg-red-600"
+                      >
+                        Cancel Booking
+                      </button>
+                    )}
+
                   <Link
                     to="/profile"
-                    className="text-center bg-gray-200 text-gray-700 px-5 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+                    className="text-center bg-gray-200 text-gray-700 px-5 py-3 rounded-lg font-semibold hover:bg-gray-300"
                   >
                     My Profile
                   </Link>
@@ -352,7 +360,6 @@ function MyBookings() {
         )}
 
       </div>
-
     </section>
   );
 }

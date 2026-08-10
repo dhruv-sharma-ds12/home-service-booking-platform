@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
+const API_URL = "http://localhost:5001/api";
+
 function BookService() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -21,11 +23,17 @@ function BookService() {
 
   const [errors, setErrors] = useState({});
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
-  /* =========================
-     SCROLL TO TOP
-     WHEN CONFIRMATION APPEARS
-  ========================= */
+  useEffect(() => {
+    if (user?.name) {
+      setFormData((prev) => ({
+        ...prev,
+        customerName: user.name,
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (bookingConfirmed) {
@@ -37,14 +45,14 @@ function BookService() {
     }
   }, [bookingConfirmed]);
 
-  /* =========================
-     SERVICE NOT FOUND
-  ========================= */
+  // --------------------------------
+  // SERVICE NOT FOUND
+  // --------------------------------
 
   if (!service) {
     return (
-      <section className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-md p-8 text-center max-w-md w-full">
+      <section className="min-h-screen bg-gray-100 py-12 px-4">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-md p-8 text-center">
 
           <h1 className="text-2xl font-bold text-blue-900 mb-3">
             Service Not Found
@@ -66,15 +74,14 @@ function BookService() {
     );
   }
 
-  /* =========================
-     LOGIN REQUIRED
-  ========================= */
+  // --------------------------------
+  // LOGIN REQUIRED
+  // --------------------------------
 
   if (!isAuthenticated) {
     return (
-      <section className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-
-        <div className="bg-white rounded-2xl shadow-md p-8 text-center max-w-md w-full">
+      <section className="min-h-screen bg-gray-100 py-12 px-4">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-md p-8 text-center">
 
           <h1 className="text-2xl font-bold text-blue-900 mb-3">
             Login Required
@@ -92,14 +99,13 @@ function BookService() {
           </button>
 
         </div>
-
       </section>
     );
   }
 
-  /* =========================
-     FORM CHANGE
-  ========================= */
+  // --------------------------------
+  // HANDLE INPUT
+  // --------------------------------
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -113,132 +119,123 @@ function BookService() {
       ...prev,
       [name]: "",
     }));
+
+    setApiError("");
   };
 
-  /* =========================
-     VALIDATION
-  ========================= */
+  // --------------------------------
+  // VALIDATION
+  // --------------------------------
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.customerName.trim()) {
-      newErrors.customerName =
-        "Booking person name is required";
+      newErrors.customerName = "Booking person name is required";
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone =
-        "Phone number is required";
+      newErrors.phone = "Phone number is required";
     } else if (!/^[0-9]{10}$/.test(formData.phone)) {
-      newErrors.phone =
-        "Enter a valid 10-digit phone number";
+      newErrors.phone = "Enter a valid 10-digit phone number";
     }
 
     if (!formData.address.trim()) {
-      newErrors.address =
-        "Address is required";
+      newErrors.address = "Address is required";
     }
 
     if (!formData.date) {
-      newErrors.date =
-        "Please select a date";
+      newErrors.date = "Please select a date";
     }
 
     if (!formData.time) {
-      newErrors.time =
-        "Please select a time";
+      newErrors.time = "Please select a time";
     }
 
     return newErrors;
   };
 
-  /* =========================
-     CONFIRM BOOKING
-  ========================= */
+  // --------------------------------
+  // CONFIRM BOOKING
+  // --------------------------------
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    const validationErrors = validateForm();
+  const validationErrors = validateForm();
 
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
 
-      // Scroll to the top of the form when validation fails
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "instant",
-      });
+  setLoading(true);
+  setApiError("");
 
-      return;
-    }
-
-    const existingBookings = JSON.parse(
-      localStorage.getItem("truefixBookings") || "[]"
-    );
-
-    const newBooking = {
-      id: Date.now(),
-
-      userEmail: user.email,
-
-      serviceId: service.id,
-      serviceName: service.name,
-      servicePrice: service.price,
-      serviceImage: service.image,
-
+  try {
+    const bookingData = {
+      service: service.name,
+      price: service.price,
       customerName: formData.customerName,
       phone: formData.phone,
-      address: formData.address,
-
       date: formData.date,
       time: formData.time,
-
-      instructions: formData.instructions,
-
-      status: "Pending",
-
-      createdAt: new Date().toISOString(),
+      address: formData.address,
+      notes: formData.instructions,
     };
 
-    localStorage.setItem(
-      "truefixBookings",
-      JSON.stringify([
-        ...existingBookings,
-        newBooking,
-      ])
+    console.log("Sending booking:", bookingData);
+
+    const response = await fetch(
+      "http://localhost:5001/api/bookings",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bookingData),
+      }
     );
 
-    /*
-      Show confirmation screen first.
-      The useEffect above will automatically
-      scroll the page to the top.
-    */
+    const data = await response.json();
+
+    console.log("Booking API response:", data);
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to create booking"
+      );
+    }
+
     setBookingConfirmed(true);
 
-    /*
-      Redirect after 3 seconds.
-    */
     setTimeout(() => {
       navigate("/my-bookings");
-    }, 3000);
-  };
+    }, 2000);
 
-  /* =========================
-     FULL-SCREEN CONFIRMATION
-  ========================= */
+  } catch (error) {
+    console.error("Booking error:", error);
+
+    setApiError(
+      error.message ||
+      "Something went wrong while creating the booking."
+    );
+  } finally {
+    setLoading(false);
+  }
+}; 
+
+  // --------------------------------
+  // SUCCESS SCREEN
+  // --------------------------------
 
   if (bookingConfirmed) {
     return (
-      <section className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-16">
+      <section className="min-h-screen bg-gray-100 py-12 px-4 flex items-start justify-center">
 
         <div className="w-full max-w-lg">
 
           <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-12 text-center">
-
-            {/* Success Icon */}
 
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
 
@@ -252,19 +249,13 @@ function BookService() {
 
             </div>
 
-            {/* Heading */}
-
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-900">
               Booking Confirmed!
             </h1>
 
-            {/* Message */}
-
             <p className="text-gray-600 mt-4 text-lg">
-              Your service booking has been successfully confirmed.
+              Your service booking has been successfully created.
             </p>
-
-            {/* Service */}
 
             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mt-6">
 
@@ -278,8 +269,6 @@ function BookService() {
 
             </div>
 
-            {/* Booking Person */}
-
             <div className="mt-4">
 
               <p className="text-sm text-gray-500">
@@ -292,13 +281,9 @@ function BookService() {
 
             </div>
 
-            {/* Redirect Message */}
-
             <p className="text-gray-500 text-sm mt-8">
               Redirecting you to My Bookings...
             </p>
-
-            {/* Loading Animation */}
 
             <div className="mt-4 flex justify-center">
 
@@ -314,16 +299,14 @@ function BookService() {
     );
   }
 
-  /* =========================
-     BOOKING FORM
-  ========================= */
+  // --------------------------------
+  // BOOKING FORM
+  // --------------------------------
 
   return (
-    <section className="min-h-screen bg-gray-50 px-4 py-10 sm:py-14">
+    <section className="min-h-screen bg-gray-100 py-12 px-4">
 
       <div className="max-w-3xl mx-auto">
-
-        {/* Header */}
 
         <div className="text-center mb-8">
 
@@ -341,7 +324,15 @@ function BookService() {
 
         </div>
 
-        {/* Service Summary */}
+        {/* API ERROR */}
+
+        {apiError && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
+            {apiError}
+          </div>
+        )}
+
+        {/* SERVICE SUMMARY */}
 
         <div className="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
 
@@ -373,7 +364,7 @@ function BookService() {
 
         </div>
 
-        {/* Booking Form */}
+        {/* FORM */}
 
         <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
 
@@ -382,28 +373,24 @@ function BookService() {
             className="space-y-5"
           >
 
-            {/* Booking Person */}
+            {/* NAME */}
 
             <div>
 
-              <label
-                htmlFor="customerName"
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Booking Person Name
               </label>
 
               <input
-                id="customerName"
                 type="text"
                 name="customerName"
                 value={formData.customerName}
                 onChange={handleChange}
                 placeholder="Enter booking person's name"
-                className={`w-full px-4 py-3 border rounded-xl outline-none transition ${
+                className={`w-full px-4 py-3 border rounded-xl outline-none ${
                   errors.customerName
                     ? "border-red-500"
-                    : "border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    : "border-gray-300 focus:border-orange-500"
                 }`}
               />
 
@@ -415,29 +402,25 @@ function BookService() {
 
             </div>
 
-            {/* Phone */}
+            {/* PHONE */}
 
             <div>
 
-              <label
-                htmlFor="phone"
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Phone Number
               </label>
 
               <input
-                id="phone"
                 type="tel"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="Enter 10-digit phone number"
                 maxLength="10"
-                className={`w-full px-4 py-3 border rounded-xl outline-none transition ${
+                className={`w-full px-4 py-3 border rounded-xl outline-none ${
                   errors.phone
                     ? "border-red-500"
-                    : "border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    : "border-gray-300 focus:border-orange-500"
                 }`}
               />
 
@@ -449,28 +432,24 @@ function BookService() {
 
             </div>
 
-            {/* Address */}
+            {/* ADDRESS */}
 
             <div>
 
-              <label
-                htmlFor="address"
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Service Address
               </label>
 
               <textarea
-                id="address"
                 name="address"
                 rows="3"
                 value={formData.address}
                 onChange={handleChange}
                 placeholder="Enter complete service address"
-                className={`w-full px-4 py-3 border rounded-xl outline-none resize-none transition ${
+                className={`w-full px-4 py-3 border rounded-xl outline-none resize-none ${
                   errors.address
                     ? "border-red-500"
-                    : "border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    : "border-gray-300 focus:border-orange-500"
                 }`}
               />
 
@@ -482,32 +461,26 @@ function BookService() {
 
             </div>
 
-            {/* Date + Time */}
+            {/* DATE + TIME */}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-              {/* Date */}
-
               <div>
 
-                <label
-                  htmlFor="date"
-                  className="block text-sm font-semibold text-gray-700 mb-2"
-                >
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Appointment Date
                 </label>
 
                 <input
-                  id="date"
                   type="date"
                   name="date"
                   value={formData.date}
                   onChange={handleChange}
                   min={new Date().toISOString().split("T")[0]}
-                  className={`w-full px-4 py-3 border rounded-xl outline-none transition ${
+                  className={`w-full px-4 py-3 border rounded-xl outline-none ${
                     errors.date
                       ? "border-red-500"
-                      : "border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      : "border-gray-300 focus:border-orange-500"
                   }`}
                 />
 
@@ -519,26 +492,20 @@ function BookService() {
 
               </div>
 
-              {/* Time */}
-
               <div>
 
-                <label
-                  htmlFor="time"
-                  className="block text-sm font-semibold text-gray-700 mb-2"
-                >
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Appointment Time
                 </label>
 
                 <select
-                  id="time"
                   name="time"
                   value={formData.time}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-xl outline-none transition ${
+                  className={`w-full px-4 py-3 border rounded-xl outline-none ${
                     errors.time
                       ? "border-red-500"
-                      : "border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      : "border-gray-300 focus:border-orange-500"
                   }`}
                 >
 
@@ -546,29 +513,12 @@ function BookService() {
                     Select time
                   </option>
 
-                  <option value="09:00 AM">
-                    09:00 AM
-                  </option>
-
-                  <option value="11:00 AM">
-                    11:00 AM
-                  </option>
-
-                  <option value="01:00 PM">
-                    01:00 PM
-                  </option>
-
-                  <option value="03:00 PM">
-                    03:00 PM
-                  </option>
-
-                  <option value="05:00 PM">
-                    05:00 PM
-                  </option>
-
-                  <option value="07:00 PM">
-                    07:00 PM
-                  </option>
+                  <option value="09:00 AM">09:00 AM</option>
+                  <option value="11:00 AM">11:00 AM</option>
+                  <option value="01:00 PM">01:00 PM</option>
+                  <option value="03:00 PM">03:00 PM</option>
+                  <option value="05:00 PM">05:00 PM</option>
+                  <option value="07:00 PM">07:00 PM</option>
 
                 </select>
 
@@ -582,34 +532,29 @@ function BookService() {
 
             </div>
 
-            {/* Instructions */}
+            {/* INSTRUCTIONS */}
 
             <div>
 
-              <label
-                htmlFor="instructions"
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Additional Instructions
-
                 <span className="text-gray-400 font-normal">
                   {" "} (Optional)
                 </span>
               </label>
 
               <textarea
-                id="instructions"
                 name="instructions"
                 rows="4"
                 value={formData.instructions}
                 onChange={handleChange}
                 placeholder="Any specific instructions for the professional?"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none resize-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none resize-none focus:border-orange-500"
               />
 
             </div>
 
-            {/* Price */}
+            {/* PRICE */}
 
             <div className="bg-orange-50 border border-orange-100 rounded-xl p-5">
 
@@ -641,13 +586,18 @@ function BookService() {
 
             </div>
 
-            {/* Confirm Booking */}
+            {/* BUTTON */}
 
             <button
               type="submit"
-              className="w-full bg-orange-500 text-white py-3.5 rounded-xl font-semibold shadow-md hover:bg-orange-600 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+              disabled={loading}
+              className={`w-full text-white py-3.5 rounded-xl font-semibold shadow-md transition ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-orange-500 hover:bg-orange-600"
+              }`}
             >
-              Confirm Booking
+              {loading ? "Creating Booking..." : "Confirm Booking"}
             </button>
 
           </form>
