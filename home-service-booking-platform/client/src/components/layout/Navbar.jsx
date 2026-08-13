@@ -152,7 +152,7 @@ function Navbar() {
               <form onSubmit={handleSearch}>
 
                 <div
-                  className={`flex items-center bg-gray-950 border rounded-full px-4 py-2.5 transition-all duration-200 ${
+                  className={`flex items-center bg-gray-100 border rounded-full px-4 py-2.5 transition-all duration-200 ${
                     searchFocused
                       ? "border-orange-400 ring-4 ring-orange-100 bg-white shadow-md"
                       : "border-gray-200 hover:border-orange-300 hover:shadow-sm"

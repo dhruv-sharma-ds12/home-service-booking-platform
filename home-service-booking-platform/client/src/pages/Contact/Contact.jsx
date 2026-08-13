@@ -100,6 +100,10 @@ function Contact() {
                   <p className="text-blue-100 mt-1">
                     +91 83073 57247
                   </p>
+
+                  <p className="text-blue-100 mt-1">
+                    +91 98965 57247
+                  </p>
                 </div>
 
               </div>
