@@ -79,7 +79,7 @@ function Login() {
   // LOGIN SUBMIT
   // =========================
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = validateForm();
@@ -89,39 +89,43 @@ function Login() {
       return;
     }
 
-    // Call AuthContext login
-    const result = login(
-      formData.email,
-      formData.password
-    );
+    try {
+      const result = await login(
+        formData.email,
+        formData.password
+      );
 
-    // Login failed
-    if (!result.success) {
+      // Login failed
+      if (!result.success) {
+        setErrors({
+          general:
+            result.message ||
+            "Invalid email or password.",
+        });
+
+        return;
+      }
+
+      // Login successful
+      if (result.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    } catch (error) {
       setErrors({
         general:
-          result.message ||
-          "Invalid email or password.",
+          error.message ||
+          "Login failed. Please try again.",
       });
-
-      return;
-    }
-
-    // Login successful
-    if (result.user.role === "admin") {
-      navigate("/admin");
-    } else {
-      navigate("/");
     }
   };
 
   return (
     <section className="min-h-screen bg-gray-200 flex items-center justify-center px-4 py-12">
-
       <div className="w-full max-w-md">
 
-        {/* =========================
-            BACK TO HOME
-        ========================= */}
+        {/* BACK TO HOME */}
 
         <Link
           to="/"
@@ -131,15 +135,11 @@ function Login() {
           Back to Home
         </Link>
 
-        {/* =========================
-            LOGIN CARD
-        ========================= */}
+        {/* LOGIN CARD */}
 
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8">
 
-          {/* =========================
-              HEADING
-          ========================= */}
+          {/* HEADING */}
 
           <div className="text-center mb-8">
 
@@ -151,7 +151,6 @@ function Login() {
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-
               <span className="text-blue-950">
                 True
               </span>
@@ -159,7 +158,6 @@ function Login() {
               <span className="text-orange-500">
                 Fix
               </span>
-
             </h1>
 
             <h2 className="text-2xl font-bold text-gray-800 mt-4">
@@ -172,9 +170,7 @@ function Login() {
 
           </div>
 
-          {/* =========================
-              GENERAL ERROR
-          ========================= */}
+          {/* GENERAL ERROR */}
 
           {errors.general && (
             <div className="mb-5 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -182,18 +178,14 @@ function Login() {
             </div>
           )}
 
-          {/* =========================
-              FORM
-          ========================= */}
+          {/* FORM */}
 
           <form
             onSubmit={handleSubmit}
             className="space-y-5"
           >
 
-            {/* =========================
-                EMAIL
-            ========================= */}
+            {/* EMAIL */}
 
             <div>
 
@@ -235,9 +227,7 @@ function Login() {
 
             </div>
 
-            {/* =========================
-                PASSWORD
-            ========================= */}
+            {/* PASSWORD */}
 
             <div>
 
@@ -302,9 +292,7 @@ function Login() {
 
             </div>
 
-            {/* =========================
-                FORGOT PASSWORD
-            ========================= */}
+            {/* FORGOT PASSWORD */}
 
             <div className="flex justify-end">
 
@@ -322,9 +310,7 @@ function Login() {
 
             </div>
 
-            {/* =========================
-                LOGIN BUTTON
-            ========================= */}
+            {/* LOGIN BUTTON */}
 
             <button
               type="submit"
@@ -335,9 +321,7 @@ function Login() {
 
           </form>
 
-          {/* =========================
-              REGISTER LINK
-          ========================= */}
+          {/* REGISTER LINK */}
 
           <div className="text-center mt-7 pt-6 border-t border-gray-100 text-gray-600">
 
@@ -355,9 +339,7 @@ function Login() {
           </div>
 
         </div>
-
       </div>
-
     </section>
   );
 }

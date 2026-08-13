@@ -1,5 +1,12 @@
 import { createContext, useContext, useState } from "react";
 
+import {
+  register as registerUser,
+  login as loginUser,
+  logout as logoutUser,
+  getCurrentUser,
+} from "../services/authService";
+
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -8,132 +15,55 @@ export function AuthProvider({ children }) {
   // =========================
 
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("truefixUser");
-
-    return savedUser ? JSON.parse(savedUser) : null;
+    return getCurrentUser();
   });
 
   // =========================
   // REGISTER
   // =========================
 
-  const register = (userData) => {
-    const existingUsers =
-      JSON.parse(localStorage.getItem("truefixUsers")) || [];
+  const register = async (userData) => {
+    try {
+      const data = await registerUser(userData);
 
-    // Check whether email already exists
-    const existingUser = existingUsers.find(
-      (item) =>
-        item.email.toLowerCase() ===
-        userData.email.trim().toLowerCase()
-    );
-
-    if (existingUser) {
+      return {
+        success: true,
+        user: data.user,
+        message: data.message,
+      };
+    } catch (error) {
       return {
         success: false,
-        message: "An account with this email already exists.",
+        message:
+          error.message || "Registration failed.",
       };
     }
-
-    // Create new customer
-    const newUser = {
-      id: Date.now(),
-      name: userData.name.trim(),
-      email: userData.email.trim().toLowerCase(),
-      phone: userData.phone.trim(),
-      password: userData.password,
-      role: "customer",
-    };
-
-    // Save user to registered users
-    existingUsers.push(newUser);
-
-    localStorage.setItem(
-      "truefixUsers",
-      JSON.stringify(existingUsers)
-    );
-
-    return {
-      success: true,
-      user: newUser,
-    };
   };
 
   // =========================
   // LOGIN
   // =========================
 
-  const login = (email, password) => {
-    const cleanEmail = email.trim().toLowerCase();
+  const login = async (email, password) => {
+    try {
+      const data = await loginUser({
+        email,
+        password,
+      });
 
-    // =========================
-    // DEMO ADMIN ACCOUNT
-    // =========================
-
-    if (
-      cleanEmail === "admin@truefix.com" &&
-      password === "admin123"
-    ) {
-      const adminUser = {
-        name: "TrueFix Admin",
-        email: "admin@truefix.com",
-        role: "admin",
-      };
-
-      setUser(adminUser);
-
-      localStorage.setItem(
-        "truefixUser",
-        JSON.stringify(adminUser)
-      );
+      setUser(data.user);
 
       return {
         success: true,
-        user: adminUser,
+        user: data.user,
+        token: data.token,
       };
-    }
-
-    // =========================
-    // CUSTOMER LOGIN
-    // =========================
-
-    const existingUsers =
-      JSON.parse(localStorage.getItem("truefixUsers")) || [];
-
-    const foundUser = existingUsers.find(
-      (item) =>
-        item.email === cleanEmail &&
-        item.password === password
-    );
-
-    // Wrong email/password
-    if (!foundUser) {
+    } catch (error) {
       return {
         success: false,
-        message: "Invalid email or password.",
+        message: error.message || "Login failed.",
       };
     }
-
-    // Don't store password in logged-in user
-    const loggedInUser = {
-      id: foundUser.id,
-      name: foundUser.name,
-      email: foundUser.email,
-      phone: foundUser.phone,
-      role: foundUser.role,
-    };
-
-    setUser(loggedInUser);
-
-    localStorage.setItem(
-      "truefixUser",
-      JSON.stringify(loggedInUser)
-    );
-
-    return {
-      success: true,
-      user: loggedInUser,
-    };
   };
 
   // =========================
@@ -141,8 +71,8 @@ export function AuthProvider({ children }) {
   // =========================
 
   const logout = () => {
+    logoutUser();
     setUser(null);
-    localStorage.removeItem("truefixUser");
   };
 
   // =========================

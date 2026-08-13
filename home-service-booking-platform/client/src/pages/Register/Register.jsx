@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import {
   Eye,
   EyeOff,
@@ -28,7 +29,8 @@ function Register() {
 
   const [errors, setErrors] = useState({});
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] =
+    useState(false);
 
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
@@ -63,7 +65,8 @@ function Register() {
     if (!formData.name.trim()) {
       newErrors.name = "Full name is required";
     } else if (formData.name.trim().length < 3) {
-      newErrors.name = "Name must be at least 3 characters";
+      newErrors.name =
+        "Name must be at least 3 characters";
     }
 
     // Email
@@ -74,12 +77,14 @@ function Register() {
         formData.email.trim()
       )
     ) {
-      newErrors.email = "Enter a valid email address";
+      newErrors.email =
+        "Enter a valid email address";
     }
 
     // Phone
     if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
+      newErrors.phone =
+        "Phone number is required";
     } else if (!/^[0-9]{10}$/.test(formData.phone)) {
       newErrors.phone =
         "Enter a valid 10-digit phone number";
@@ -87,7 +92,8 @@ function Register() {
 
     // Password
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password =
+        "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password =
         "Password must be at least 6 characters";
@@ -98,7 +104,8 @@ function Register() {
       newErrors.confirmPassword =
         "Please confirm your password";
     } else if (
-      formData.password !== formData.confirmPassword
+      formData.password !==
+      formData.confirmPassword
     ) {
       newErrors.confirmPassword =
         "Passwords do not match";
@@ -111,7 +118,7 @@ function Register() {
   // SUBMIT
   // =========================
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = validateForm();
@@ -121,25 +128,34 @@ function Register() {
       return;
     }
 
-    // Register user
-    const result = register({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      password: formData.password,
-    });
-
-    // Registration failed
-    if (!result.success) {
-      setErrors({
-        general: result.message,
+    try {
+      const result = await register({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
       });
 
-      return;
-    }
+      // Registration failed
+      if (!result.success) {
+        setErrors({
+          general:
+            result.message ||
+            "Registration failed.",
+        });
 
-    // Registration successful
-    navigate("/login");
+        return;
+      }
+
+      // Registration successful
+      navigate("/login");
+    } catch (error) {
+      setErrors({
+        general:
+          error.message ||
+          "Registration failed. Please try again.",
+      });
+    }
   };
 
   return (
@@ -147,9 +163,7 @@ function Register() {
 
       <div className="w-full max-w-md">
 
-        {/* =========================
-            BACK TO HOME
-        ========================= */}
+        {/* BACK TO HOME */}
 
         <Link
           to="/"
@@ -159,13 +173,11 @@ function Register() {
           Back to Home
         </Link>
 
-        {/* =========================
-            REGISTER CARD
-        ========================= */}
+        {/* REGISTER CARD */}
 
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8">
 
-          {/* Heading */}
+          {/* HEADING */}
 
           <div className="text-center mb-8">
 
@@ -198,9 +210,7 @@ function Register() {
 
           </div>
 
-          {/* =========================
-              GENERAL ERROR
-          ========================= */}
+          {/* GENERAL ERROR */}
 
           {errors.general && (
             <div className="mb-5 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -208,18 +218,14 @@ function Register() {
             </div>
           )}
 
-          {/* =========================
-              FORM
-          ========================= */}
+          {/* FORM */}
 
           <form
             onSubmit={handleSubmit}
             className="space-y-5"
           >
 
-            {/* =========================
-                NAME
-            ========================= */}
+            {/* NAME */}
 
             <div>
 
@@ -261,9 +267,7 @@ function Register() {
 
             </div>
 
-            {/* =========================
-                EMAIL
-            ========================= */}
+            {/* EMAIL */}
 
             <div>
 
@@ -305,9 +309,7 @@ function Register() {
 
             </div>
 
-            {/* =========================
-                PHONE
-            ========================= */}
+            {/* PHONE */}
 
             <div>
 
@@ -350,9 +352,7 @@ function Register() {
 
             </div>
 
-            {/* =========================
-                PASSWORD
-            ========================= */}
+            {/* PASSWORD */}
 
             <div>
 
@@ -394,6 +394,11 @@ function Register() {
                     setShowPassword(!showPassword)
                   }
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-blue-900 transition-colors duration-200"
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
                 >
                   {showPassword ? (
                     <EyeOff size={19} />
@@ -412,9 +417,7 @@ function Register() {
 
             </div>
 
-            {/* =========================
-                CONFIRM PASSWORD
-            ========================= */}
+            {/* CONFIRM PASSWORD */}
 
             <div>
 
@@ -458,6 +461,11 @@ function Register() {
                     )
                   }
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-blue-900 transition-colors duration-200"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
                 >
                   {showConfirmPassword ? (
                     <EyeOff size={19} />
@@ -476,9 +484,7 @@ function Register() {
 
             </div>
 
-            {/* =========================
-                REGISTER BUTTON
-            ========================= */}
+            {/* REGISTER BUTTON */}
 
             <button
               type="submit"
@@ -489,9 +495,7 @@ function Register() {
 
           </form>
 
-          {/* =========================
-              LOGIN LINK
-          ========================= */}
+          {/* LOGIN LINK */}
 
           <div className="text-center mt-7 pt-6 border-t border-gray-100 text-gray-600">
 
@@ -511,7 +515,6 @@ function Register() {
         </div>
 
       </div>
-
     </section>
   );
 }

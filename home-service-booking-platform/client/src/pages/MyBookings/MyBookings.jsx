@@ -1,45 +1,66 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
+import {
+  getMyBookings,
+  cancelBooking as cancelBookingApi,
+} from "../../services/bookingService";
+
 function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // =========================
+  // FETCH MY BOOKINGS
+  // =========================
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
-        "http://localhost:5001/api/bookings"
-      );
+      const data = await getMyBookings();
 
-      const data = await response.json();
+      /*
+        Backend may return:
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to load bookings"
-        );
-      }
+        {
+          bookings: [...]
+        }
 
-      setBookings(data);
+        or directly:
 
+        [...]
+      */
+
+      setBookings(data.bookings || data);
     } catch (error) {
-      console.error("Fetch bookings error:", error);
+      console.error(
+        "Fetch bookings error:",
+        error
+      );
 
       setError(
-        error.message || "Unable to load bookings."
+        error.message ||
+          "Unable to load bookings."
       );
-
     } finally {
       setLoading(false);
     }
   };
 
+  // =========================
+  // LOAD BOOKINGS
+  // =========================
+
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  // =========================
+  // CANCEL BOOKING
+  // =========================
 
   const cancelBooking = async (id) => {
     const confirmed = window.confirm(
@@ -51,20 +72,7 @@ function MyBookings() {
     }
 
     try {
-      const response = await fetch(
-        `http://localhost:5001/api/bookings/${id}/cancel`,
-        {
-          method: "PATCH",
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to cancel booking"
-        );
-      }
+      await cancelBookingApi(id);
 
       // Update UI immediately
       setBookings((prevBookings) =>
@@ -77,16 +85,22 @@ function MyBookings() {
             : booking
         )
       );
-
     } catch (error) {
-      console.error("Cancel booking error:", error);
+      console.error(
+        "Cancel booking error:",
+        error
+      );
 
       alert(
         error.message ||
-        "Unable to cancel booking."
+          "Unable to cancel booking."
       );
     }
   };
+
+  // =========================
+  // STATUS STYLE
+  // =========================
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -105,11 +119,17 @@ function MyBookings() {
     }
   };
 
+  // =========================
+  // LOADING
+  // =========================
+
   if (loading) {
     return (
       <section className="min-h-screen bg-gray-50 py-16">
         <div className="max-w-5xl mx-auto px-4 text-center">
-          <div className="text-4xl mb-4">⏳</div>
+          <div className="text-4xl mb-4">
+            ⏳
+          </div>
 
           <h1 className="text-2xl font-bold text-blue-900">
             Loading bookings...
@@ -123,19 +143,26 @@ function MyBookings() {
     <section className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-5xl mx-auto px-4">
 
-        {/* HEADER */}
+        {/* =========================
+            HEADER
+        ========================= */}
 
         <div className="text-center mb-10">
+
           <h1 className="text-3xl sm:text-4xl font-bold text-blue-900">
             My Bookings
           </h1>
 
           <p className="text-gray-600 mt-2">
-            View and manage your TrueFix service bookings
+            View and manage your TrueFix
+            service bookings
           </p>
+
         </div>
 
-        {/* ERROR */}
+        {/* =========================
+            ERROR
+        ========================= */}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
@@ -143,11 +170,16 @@ function MyBookings() {
           </div>
         )}
 
-        {/* SUMMARY */}
+        {/* =========================
+            SUMMARY
+        ========================= */}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 
+          {/* TOTAL */}
+
           <div className="bg-white rounded-xl shadow p-5 text-center">
+
             <p className="text-2xl font-bold text-blue-900">
               {bookings.length}
             </p>
@@ -155,14 +187,19 @@ function MyBookings() {
             <p className="text-gray-500 text-sm mt-1">
               Total
             </p>
+
           </div>
 
+          {/* PENDING */}
+
           <div className="bg-white rounded-xl shadow p-5 text-center">
+
             <p className="text-2xl font-bold text-yellow-500">
               {
                 bookings.filter(
                   (booking) =>
-                    booking.status === "Pending"
+                    booking.status ===
+                    "Pending"
                 ).length
               }
             </p>
@@ -170,14 +207,19 @@ function MyBookings() {
             <p className="text-gray-500 text-sm mt-1">
               Pending
             </p>
+
           </div>
 
+          {/* CONFIRMED */}
+
           <div className="bg-white rounded-xl shadow p-5 text-center">
+
             <p className="text-2xl font-bold text-green-600">
               {
                 bookings.filter(
                   (booking) =>
-                    booking.status === "Confirmed"
+                    booking.status ===
+                    "Confirmed"
                 ).length
               }
             </p>
@@ -185,14 +227,19 @@ function MyBookings() {
             <p className="text-gray-500 text-sm mt-1">
               Confirmed
             </p>
+
           </div>
 
+          {/* CANCELLED */}
+
           <div className="bg-white rounded-xl shadow p-5 text-center">
+
             <p className="text-2xl font-bold text-red-600">
               {
                 bookings.filter(
                   (booking) =>
-                    booking.status === "Cancelled"
+                    booking.status ===
+                    "Cancelled"
                 ).length
               }
             </p>
@@ -200,11 +247,14 @@ function MyBookings() {
             <p className="text-gray-500 text-sm mt-1">
               Cancelled
             </p>
+
           </div>
 
         </div>
 
-        {/* EMPTY */}
+        {/* =========================
+            EMPTY STATE
+        ========================= */}
 
         {bookings.length === 0 ? (
 
@@ -219,7 +269,8 @@ function MyBookings() {
             </h2>
 
             <p className="text-gray-500 mt-2 mb-6">
-              You haven't booked any home services yet.
+              You haven't booked any home
+              services yet.
             </p>
 
             <Link
@@ -242,7 +293,9 @@ function MyBookings() {
                 className="bg-white rounded-xl shadow-md p-5 sm:p-6"
               >
 
-                {/* TOP */}
+                {/* =========================
+                    TOP
+                ========================= */}
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
@@ -250,7 +303,10 @@ function MyBookings() {
 
                     <p className="text-sm text-gray-500">
                       Booking ID:{" "}
-                      TF{booking._id.slice(-6).toUpperCase()}
+                      TF
+                      {booking._id
+                        ?.slice(-6)
+                        .toUpperCase()}
                     </p>
 
                     <h2 className="text-xl sm:text-2xl font-bold text-blue-900 mt-1">
@@ -269,13 +325,18 @@ function MyBookings() {
 
                 </div>
 
-                {/* DETAILS */}
+                {/* =========================
+                    DETAILS
+                ========================= */}
 
                 <div className="border-t border-gray-200 mt-5 pt-5">
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
+                    {/* DATE */}
+
                     <div>
+
                       <p className="text-sm text-gray-500">
                         Service Date
                       </p>
@@ -283,9 +344,13 @@ function MyBookings() {
                       <p className="font-medium text-gray-800 mt-1">
                         {booking.date}
                       </p>
+
                     </div>
 
+                    {/* TIME */}
+
                     <div>
+
                       <p className="text-sm text-gray-500">
                         Service Time
                       </p>
@@ -293,9 +358,13 @@ function MyBookings() {
                       <p className="font-medium text-gray-800 mt-1">
                         {booking.time}
                       </p>
+
                     </div>
 
+                    {/* ADDRESS */}
+
                     <div>
+
                       <p className="text-sm text-gray-500">
                         Address
                       </p>
@@ -303,9 +372,13 @@ function MyBookings() {
                       <p className="font-medium text-gray-800 mt-1">
                         {booking.address}
                       </p>
+
                     </div>
 
+                    {/* PRICE */}
+
                     <div>
+
                       <p className="text-sm text-gray-500">
                         Price
                       </p>
@@ -313,15 +386,20 @@ function MyBookings() {
                       <p className="font-bold text-orange-500 text-lg mt-1">
                         ₹{booking.price}
                       </p>
+
                     </div>
 
                   </div>
 
                 </div>
 
-                {/* ACTIONS */}
+                {/* =========================
+                    ACTIONS
+                ========================= */}
 
                 <div className="border-t border-gray-200 mt-5 pt-5 flex flex-col sm:flex-row gap-3">
+
+                  {/* BOOK ANOTHER */}
 
                   <Link
                     to="/services"
@@ -330,17 +408,27 @@ function MyBookings() {
                     Book Another Service
                   </Link>
 
-                  {booking.status !== "Cancelled" &&
-                    booking.status !== "Completed" && (
+                  {/* CANCEL */}
+
+                  {booking.status !==
+                    "Cancelled" &&
+                    booking.status !==
+                      "Completed" && (
+
                       <button
                         onClick={() =>
-                          cancelBooking(booking._id)
+                          cancelBooking(
+                            booking._id
+                          )
                         }
                         className="bg-red-500 text-white px-5 py-3 rounded-lg font-semibold hover:bg-red-600"
                       >
                         Cancel Booking
                       </button>
+
                     )}
+
+                  {/* PROFILE */}
 
                   <Link
                     to="/profile"
