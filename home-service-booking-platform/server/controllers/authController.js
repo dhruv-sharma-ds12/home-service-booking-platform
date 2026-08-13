@@ -2,13 +2,36 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-// Register user
+// ==========================================
+// REGISTER USER
+// ==========================================
+
 const registerUser = async (req, res) => {
   try {
-    const { name, email, phone, password, role } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      password,
+    } = req.body;
+
+    // Check required fields
+    if (
+      !name ||
+      !email ||
+      !phone ||
+      !password
+    ) {
+      return res.status(400).json({
+        message:
+          "Please provide name, email, phone and password.",
+      });
+    }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      email,
+    });
 
     if (existingUser) {
       return res.status(400).json({
@@ -17,19 +40,22 @@ const registerUser = async (req, res) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create CUSTOMER
+    // Normal registration can NEVER create admin
     const user = await User.create({
       name,
       email,
       phone,
       password: hashedPassword,
-      role: role || "customer",
+      role: "customer",
     });
 
     res.status(201).json({
       message: "User registered successfully",
+
       user: {
         id: user._id,
         name: user.name,
@@ -38,7 +64,13 @@ const registerUser = async (req, res) => {
         role: user.role,
       },
     });
+
   } catch (error) {
+    console.error(
+      "Registration error:",
+      error
+    );
+
     res.status(500).json({
       message: "Registration failed",
       error: error.message,
@@ -46,29 +78,48 @@ const registerUser = async (req, res) => {
   }
 };
 
-// Login user
+// ==========================================
+// LOGIN USER
+// ==========================================
+
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const {
+      email,
+      password,
+    } = req.body;
+
+    // Check required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        message:
+          "Please provide email and password.",
+      });
+    }
 
     // Find user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      email,
+    });
 
     if (!user) {
       return res.status(401).json({
-        message: "Invalid email or password",
+        message:
+          "Invalid email or password",
       });
     }
 
     // Check password
-    const isPasswordCorrect = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const isPasswordCorrect =
+      await bcrypt.compare(
+        password,
+        user.password
+      );
 
     if (!isPasswordCorrect) {
       return res.status(401).json({
-        message: "Invalid email or password",
+        message:
+          "Invalid email or password",
       });
     }
 
@@ -84,9 +135,12 @@ const loginUser = async (req, res) => {
       }
     );
 
+    // Send response
     res.status(200).json({
       message: "Login successful",
+
       token,
+
       user: {
         id: user._id,
         name: user.name,
@@ -95,7 +149,13 @@ const loginUser = async (req, res) => {
         role: user.role,
       },
     });
+
   } catch (error) {
+    console.error(
+      "Login error:",
+      error
+    );
+
     res.status(500).json({
       message: "Login failed",
       error: error.message,

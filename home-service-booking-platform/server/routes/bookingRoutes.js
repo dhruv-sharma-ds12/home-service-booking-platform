@@ -13,16 +13,41 @@ const {
 
 const router = express.Router();
 
-// Create booking
-router.post("/", authMiddleware, createBooking);
+// ========================================
+// CUSTOMER - CREATE BOOKING
+// ========================================
 
-// Get all bookings
-router.get("/", authMiddleware, getBookings);
+router.post(
+  "/",
+  authMiddleware,
+  createBooking
+);
 
-// Get my bookings
-router.get("/my", authMiddleware, getMyBookings);
+// ========================================
+// ADMIN - GET ALL BOOKINGS
+// ========================================
 
-// Update booking status - ADMIN ONLY
+router.get(
+  "/",
+  authMiddleware,
+  adminMiddleware,
+  getBookings
+);
+
+// ========================================
+// CUSTOMER - GET THEIR BOOKINGS
+// ========================================
+
+router.get(
+  "/my",
+  authMiddleware,
+  getMyBookings
+);
+
+// ========================================
+// ADMIN - UPDATE BOOKING STATUS
+// ========================================
+
 router.put(
   "/:id/status",
   authMiddleware,
@@ -30,7 +55,14 @@ router.put(
   updateBookingStatus
 );
 
-// Cancel booking
-router.patch("/:id/cancel", authMiddleware, cancelBooking);
+// ========================================
+// CUSTOMER OR ADMIN - CANCEL BOOKING
+// ========================================
+
+router.patch(
+  "/:id/cancel",
+  authMiddleware,
+  cancelBooking
+);
 
 module.exports = router;

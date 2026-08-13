@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 
 import Layout from "../components/layout/Layout";
+import AdminLayout from "../components/layout/AdminLayout";
 
 import Home from "../pages/Home/Home";
 import About from "../pages/About/About";
@@ -14,12 +15,22 @@ import Register from "../pages/Register/Register";
 import Profile from "../pages/Profile/Profile";
 
 import MyBookings from "../pages/MyBookings/MyBookings";
+
 import AdminDashboard from "../pages/Admin/AdminDashboard";
+import ManageBookings from "../pages/Admin/ManageBookings";
+import ManageServices from "../pages/Admin/ManageServices";
+import ManageUsers from "../pages/Admin/ManageUsers";
 
 function AppRoutes() {
   return (
     <Routes>
+
+      {/* =========================
+          CUSTOMER WEBSITE
+      ========================= */}
+
       <Route element={<Layout />}>
+
         <Route path="/" element={<Home />} />
 
         <Route path="/about" element={<About />} />
@@ -58,12 +69,37 @@ function AppRoutes() {
           element={<MyBookings />}
         />
 
-        {/* ADMIN */}
+      </Route>
+
+
+      {/* =========================
+          ADMIN PANEL
+      ========================= */}
+
+      <Route element={<AdminLayout />}>
+
         <Route
           path="/admin"
           element={<AdminDashboard />}
         />
+
+        <Route
+          path="/admin/bookings"
+          element={<ManageBookings />}
+        />
+
+        <Route
+          path="/admin/services"
+          element={<ManageServices />}
+        />
+
+        <Route
+          path="/admin/users"
+          element={<ManageUsers />}
+        />
+
       </Route>
+
     </Routes>
   );
 }

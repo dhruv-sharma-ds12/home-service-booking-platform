@@ -1,18 +1,48 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const API_URL = "http://127.0.0.1:5001/api";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 function AdminDashboard() {
+  const navigate = useNavigate();
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState(null);
+
+  // ==========================================
+  // GET AUTH TOKEN
+  // ==========================================
+
+  const getToken = () => {
+    return localStorage.getItem("token");
+  };
+
+  // ==========================================
+  // FETCH ALL BOOKINGS
+  // ==========================================
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch(`${API_URL}/bookings`);
+      const token = getToken();
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/bookings`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = await response.json();
 
@@ -22,29 +52,52 @@ function AdminDashboard() {
         );
       }
 
-      setBookings(data);
+      setBookings(Array.isArray(data) ? data : data.bookings || []);
     } catch (error) {
       console.error("Fetch bookings error:", error);
-      setError(error.message || "Failed to load bookings");
+
+      setError(
+        error.message || "Failed to load bookings."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // ==========================================
+  // LOAD BOOKINGS WHEN PAGE OPENS
+  // ==========================================
+
   useEffect(() => {
     fetchBookings();
   }, []);
 
+  // ==========================================
+  // UPDATE BOOKING STATUS
+  // ==========================================
+
   const updateBookingStatus = async (id, status) => {
     try {
+      setUpdatingId(id);
+
+      const token = getToken();
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       const response = await fetch(
         `${API_URL}/bookings/${id}/status`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify({
+            status,
+          }),
         }
       );
 
@@ -52,54 +105,81 @@ function AdminDashboard() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to update booking"
+          data.message || "Failed to update booking status"
         );
       }
 
-      setBookings((prev) =>
-        prev.map((booking) =>
+      // Update UI immediately
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
           booking._id === id
-            ? { ...booking, status }
+            ? {
+                ...booking,
+                status: data.booking?.status || status,
+              }
             : booking
         )
       );
     } catch (error) {
-      console.error("Update booking error:", error);
-      alert(error.message || "Failed to update booking");
+      console.error(
+        "Update booking status error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Failed to update booking status."
+      );
+    } finally {
+      setUpdatingId(null);
     }
   };
 
-  const deleteBooking = async (id) => {
+  // ==========================================
+  // ADMIN CANCEL BOOKING
+  // ==========================================
+
+  const cancelBooking = async (id) => {
     const confirmed = window.confirm(
       "Are you sure you want to cancel this booking?"
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
-    try {
-      const response = await fetch(
-        `${API_URL}/bookings/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
+    // IMPORTANT:
+    // Admin cancellation uses the STATUS endpoint.
+    // We do NOT use /:id/cancel here because that
+    // endpoint is designed for the customer/owner.
 
-      const data = await response.json();
+    await updateBookingStatus(id, "Cancelled");
+  };
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to cancel booking"
-        );
-      }
+  // ==========================================
+  // STATUS STYLE
+  // ==========================================
 
-      setBookings((prev) =>
-        prev.filter((booking) => booking._id !== id)
-      );
-    } catch (error) {
-      console.error("Cancel booking error:", error);
-      alert(error.message || "Failed to cancel booking");
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case "Confirmed":
+        return "bg-green-100 text-green-700";
+
+      case "Completed":
+        return "bg-blue-100 text-blue-700";
+
+      case "Cancelled":
+        return "bg-red-100 text-red-700";
+
+      case "Pending":
+      default:
+        return "bg-yellow-100 text-yellow-700";
     }
   };
+
+  // ==========================================
+  // STATISTICS
+  // ==========================================
 
   const totalBookings = bookings.length;
 
@@ -119,11 +199,18 @@ function AdminDashboard() {
     (booking) => booking.status === "Cancelled"
   ).length;
 
+  // ==========================================
+  // PAGE
+  // ==========================================
+
   return (
     <section className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-7xl mx-auto">
 
-        {/* HEADER */}
+        {/* =====================================
+            HEADER
+        ===================================== */}
+
         <div className="mb-8">
           <p className="text-orange-500 font-semibold">
             TRUEFIX ADMIN
@@ -138,65 +225,90 @@ function AdminDashboard() {
           </p>
         </div>
 
-        {/* ERROR */}
+        {/* =====================================
+            ERROR
+        ===================================== */}
+
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
             {error}
           </div>
         )}
 
-        {/* STATISTICS */}
+        {/* =====================================
+            STATISTICS
+        ===================================== */}
+
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+
+          {/* TOTAL */}
 
           <div className="bg-white rounded-xl shadow p-5">
             <p className="text-gray-500 text-sm">
               Total
             </p>
+
             <p className="text-3xl font-bold text-blue-900 mt-1">
               {totalBookings}
             </p>
           </div>
 
+          {/* PENDING */}
+
           <div className="bg-white rounded-xl shadow p-5">
             <p className="text-gray-500 text-sm">
               Pending
             </p>
+
             <p className="text-3xl font-bold text-yellow-500 mt-1">
               {pendingBookings}
             </p>
           </div>
 
+          {/* CONFIRMED */}
+
           <div className="bg-white rounded-xl shadow p-5">
             <p className="text-gray-500 text-sm">
               Confirmed
             </p>
+
             <p className="text-3xl font-bold text-green-600 mt-1">
               {confirmedBookings}
             </p>
           </div>
 
+          {/* COMPLETED */}
+
           <div className="bg-white rounded-xl shadow p-5">
             <p className="text-gray-500 text-sm">
               Completed
             </p>
+
             <p className="text-3xl font-bold text-blue-600 mt-1">
               {completedBookings}
             </p>
           </div>
 
+          {/* CANCELLED */}
+
           <div className="bg-white rounded-xl shadow p-5">
             <p className="text-gray-500 text-sm">
               Cancelled
             </p>
+
             <p className="text-3xl font-bold text-red-500 mt-1">
               {cancelledBookings}
             </p>
           </div>
-
         </div>
 
-        {/* BOOKINGS */}
+        {/* =====================================
+            BOOKINGS CONTAINER
+        ===================================== */}
+
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+
+          {/* HEADER */}
 
           <div className="p-6 border-b">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -213,27 +325,39 @@ function AdminDashboard() {
 
               <button
                 onClick={fetchBookings}
-                className="bg-blue-900 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-800"
+                disabled={loading}
+                className="bg-blue-900 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-800 disabled:bg-gray-400"
               >
-                Refresh
+                {loading ? "Refreshing..." : "Refresh"}
               </button>
 
             </div>
           </div>
 
+          {/* =====================================
+              LOADING
+          ===================================== */}
+
           {loading ? (
 
             <div className="p-10 text-center">
+
               <div className="w-10 h-10 mx-auto border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin"></div>
 
               <p className="text-gray-500 mt-4">
                 Loading bookings...
               </p>
+
             </div>
 
           ) : bookings.length === 0 ? (
 
+            /* =====================================
+               EMPTY
+            ===================================== */
+
             <div className="p-10 text-center">
+
               <div className="text-5xl mb-4">
                 📅
               </div>
@@ -245,15 +369,21 @@ function AdminDashboard() {
               <p className="text-gray-500 mt-2">
                 Customer bookings will appear here.
               </p>
+
             </div>
 
           ) : (
 
+            /* =====================================
+               TABLE
+            ===================================== */
+
             <div className="overflow-x-auto">
 
-              <table className="w-full min-w-[1000px]">
+              <table className="w-full min-w-[1100px]">
 
                 <thead className="bg-gray-50">
+
                   <tr>
 
                     <th className="text-left px-5 py-4 text-sm font-semibold text-gray-600">
@@ -281,13 +411,19 @@ function AdminDashboard() {
                     </th>
 
                   </tr>
+
                 </thead>
 
                 <tbody className="divide-y">
 
                   {bookings.map((booking) => (
 
-                    <tr key={booking._id}>
+                    <tr
+                      key={booking._id}
+                      className="hover:bg-gray-50"
+                    >
+
+                      {/* CUSTOMER */}
 
                       <td className="px-5 py-4">
 
@@ -301,17 +437,21 @@ function AdminDashboard() {
 
                       </td>
 
+                      {/* SERVICE */}
+
                       <td className="px-5 py-4">
 
                         <p className="font-semibold text-blue-900">
                           {booking.service}
                         </p>
 
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 max-w-xs">
                           {booking.address}
                         </p>
 
                       </td>
+
+                      {/* DATE / TIME */}
 
                       <td className="px-5 py-4">
 
@@ -325,6 +465,8 @@ function AdminDashboard() {
 
                       </td>
 
+                      {/* PRICE */}
+
                       <td className="px-5 py-4">
 
                         <p className="font-bold text-orange-500">
@@ -333,18 +475,26 @@ function AdminDashboard() {
 
                       </td>
 
+                      {/* STATUS */}
+
                       <td className="px-5 py-4">
 
                         <select
                           value={booking.status}
+                          disabled={
+                            updatingId === booking._id
+                          }
                           onChange={(e) =>
                             updateBookingStatus(
                               booking._id,
                               e.target.value
                             )
                           }
-                          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          className={`border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium ${getStatusStyle(
+                            booking.status
+                          )}`}
                         >
+
                           <option value="Pending">
                             Pending
                           </option>
@@ -360,20 +510,42 @@ function AdminDashboard() {
                           <option value="Cancelled">
                             Cancelled
                           </option>
+
                         </select>
 
                       </td>
 
+                      {/* ACTIONS */}
+
                       <td className="px-5 py-4">
 
-                        <button
-                          onClick={() =>
-                            deleteBooking(booking._id)
-                          }
-                          className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-semibold hover:bg-red-200"
-                        >
-                          Cancel
-                        </button>
+                        {booking.status !== "Cancelled" &&
+                        booking.status !== "Completed" ? (
+
+                          <button
+                            onClick={() =>
+                              cancelBooking(
+                                booking._id
+                              )
+                            }
+                            disabled={
+                              updatingId ===
+                              booking._id
+                            }
+                            className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-semibold hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400"
+                          >
+                            {updatingId === booking._id
+                              ? "Updating..."
+                              : "Cancel"}
+                          </button>
+
+                        ) : (
+
+                          <span className="text-gray-400 text-sm">
+                            No action
+                          </span>
+
+                        )}
 
                       </td>
 
@@ -390,7 +562,6 @@ function AdminDashboard() {
           )}
 
         </div>
-
       </div>
     </section>
   );

@@ -8,6 +8,8 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const bookingRoutes = require("./routes/bookingRoutes");
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const serviceRoutes = require("./routes/serviceRoutes");
 
 dotenv.config();
 
@@ -30,6 +32,12 @@ app.use("/api/bookings", bookingRoutes);
 
 // Auth routes
 app.use("/api/auth", authRoutes);
+
+// User routes
+app.use("/api/users", userRoutes);
+
+// Service routes
+app.use("/api/services", serviceRoutes);
 
 // Server
 const PORT = process.env.PORT || 5001;

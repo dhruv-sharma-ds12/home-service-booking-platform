@@ -26,6 +26,10 @@ function BookService() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
+  // --------------------------------
+  // UPDATE CUSTOMER NAME
+  // --------------------------------
+
   useEffect(() => {
     if (user?.name) {
       setFormData((prev) => ({
@@ -34,6 +38,10 @@ function BookService() {
       }));
     }
   }, [user]);
+
+  // --------------------------------
+  // SCROLL TO TOP AFTER CONFIRMATION
+  // --------------------------------
 
   useEffect(() => {
     if (bookingConfirmed) {
@@ -53,7 +61,6 @@ function BookService() {
     return (
       <section className="min-h-screen bg-gray-100 py-12 px-4">
         <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-md p-8 text-center">
-
           <h1 className="text-2xl font-bold text-blue-900 mb-3">
             Service Not Found
           </h1>
@@ -68,7 +75,6 @@ function BookService() {
           >
             Browse Services
           </button>
-
         </div>
       </section>
     );
@@ -82,7 +88,6 @@ function BookService() {
     return (
       <section className="min-h-screen bg-gray-100 py-12 px-4">
         <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-md p-8 text-center">
-
           <h1 className="text-2xl font-bold text-blue-900 mb-3">
             Login Required
           </h1>
@@ -97,7 +102,6 @@ function BookService() {
           >
             Go to Login
           </button>
-
         </div>
       </section>
     );
@@ -159,71 +163,101 @@ function BookService() {
   // CONFIRM BOOKING
   // --------------------------------
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const validationErrors = validateForm();
+    const validationErrors = validateForm();
 
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
-
-  setLoading(true);
-  setApiError("");
-
-  try {
-    const bookingData = {
-      service: service.name,
-      price: service.price,
-      customerName: formData.customerName,
-      phone: formData.phone,
-      date: formData.date,
-      time: formData.time,
-      address: formData.address,
-      notes: formData.instructions,
-    };
-
-    console.log("Sending booking:", bookingData);
-
-    const response = await fetch(
-      "http://localhost:5001/api/bookings",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(bookingData),
-      }
-    );
-
-    const data = await response.json();
-
-    console.log("Booking API response:", data);
-
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Failed to create booking"
-      );
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
     }
 
-    setBookingConfirmed(true);
+    setLoading(true);
+    setApiError("");
 
-    setTimeout(() => {
-      navigate("/my-bookings");
-    }, 2000);
+    try {
+      // -----------------------------
+      // BOOKING DATA
+      // -----------------------------
 
-  } catch (error) {
-    console.error("Booking error:", error);
+      const bookingData = {
+        service: service.name,
+        price: service.price,
+        customerName: formData.customerName,
+        phone: formData.phone,
+        date: formData.date,
+        time: formData.time,
+        address: formData.address,
+        notes: formData.instructions,
+      };
 
-    setApiError(
-      error.message ||
-      "Something went wrong while creating the booking."
-    );
-  } finally {
-    setLoading(false);
-  }
-}; 
+      console.log("Sending booking:", bookingData);
+
+      // -----------------------------
+      // GET JWT TOKEN
+      // -----------------------------
+
+      const token = localStorage.getItem("token");
+
+      console.log("Token exists:", Boolean(token));
+
+      if (!token) {
+        throw new Error(
+          "Authentication token not found. Please login again."
+        );
+      }
+
+      // -----------------------------
+      // SEND BOOKING TO BACKEND
+      // -----------------------------
+
+      const response = await fetch(`${API_URL}/bookings`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        body: JSON.stringify(bookingData),
+      });
+
+      const data = await response.json();
+
+      console.log("Booking API response:", data);
+
+      // -----------------------------
+      // HANDLE API ERROR
+      // -----------------------------
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to create booking"
+        );
+      }
+
+      // -----------------------------
+      // SUCCESS
+      // -----------------------------
+
+      setBookingConfirmed(true);
+
+      setTimeout(() => {
+        navigate("/my-bookings");
+      }, 2000);
+
+    } catch (error) {
+      console.error("Booking error:", error);
+
+      setApiError(
+        error.message ||
+          "Something went wrong while creating the booking."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --------------------------------
   // SUCCESS SCREEN
@@ -232,21 +266,15 @@ const handleSubmit = async (e) => {
   if (bookingConfirmed) {
     return (
       <section className="min-h-screen bg-gray-100 py-12 px-4 flex items-start justify-center">
-
         <div className="w-full max-w-lg">
-
           <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-12 text-center">
 
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
-
               <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
-
                 <span className="text-white text-4xl font-bold">
                   ✓
                 </span>
-
               </div>
-
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-900">
@@ -258,7 +286,6 @@ const handleSubmit = async (e) => {
             </p>
 
             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mt-6">
-
               <p className="text-sm text-gray-500">
                 Service
               </p>
@@ -266,11 +293,9 @@ const handleSubmit = async (e) => {
               <p className="text-lg font-bold text-blue-900 mt-1">
                 {service.name}
               </p>
-
             </div>
 
             <div className="mt-4">
-
               <p className="text-sm text-gray-500">
                 Booking Person
               </p>
@@ -278,7 +303,6 @@ const handleSubmit = async (e) => {
               <p className="font-semibold text-gray-800 mt-1">
                 {formData.customerName}
               </p>
-
             </div>
 
             <p className="text-gray-500 text-sm mt-8">
@@ -286,15 +310,11 @@ const handleSubmit = async (e) => {
             </p>
 
             <div className="mt-4 flex justify-center">
-
               <div className="w-8 h-8 border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin"></div>
-
             </div>
 
           </div>
-
         </div>
-
       </section>
     );
   }
@@ -305,11 +325,11 @@ const handleSubmit = async (e) => {
 
   return (
     <section className="min-h-screen bg-gray-100 py-12 px-4">
-
       <div className="max-w-3xl mx-auto">
 
-        <div className="text-center mb-8">
+        {/* PAGE HEADER */}
 
+        <div className="text-center mb-8">
           <p className="text-orange-500 font-semibold">
             BOOK YOUR SERVICE
           </p>
@@ -321,7 +341,6 @@ const handleSubmit = async (e) => {
           <p className="text-gray-600 mt-3">
             Enter your details and choose a convenient appointment.
           </p>
-
         </div>
 
         {/* API ERROR */}
@@ -345,7 +364,6 @@ const handleSubmit = async (e) => {
           <div className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
             <div>
-
               <h2 className="text-xl font-bold text-blue-900">
                 {service.name}
               </h2>
@@ -353,7 +371,6 @@ const handleSubmit = async (e) => {
               <p className="text-gray-500 mt-1">
                 Professional home service
               </p>
-
             </div>
 
             <p className="text-orange-500 text-xl font-bold">
@@ -361,7 +378,6 @@ const handleSubmit = async (e) => {
             </p>
 
           </div>
-
         </div>
 
         {/* FORM */}
@@ -376,7 +392,6 @@ const handleSubmit = async (e) => {
             {/* NAME */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Booking Person Name
               </label>
@@ -399,13 +414,11 @@ const handleSubmit = async (e) => {
                   {errors.customerName}
                 </p>
               )}
-
             </div>
 
             {/* PHONE */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Phone Number
               </label>
@@ -429,13 +442,11 @@ const handleSubmit = async (e) => {
                   {errors.phone}
                 </p>
               )}
-
             </div>
 
             {/* ADDRESS */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Service Address
               </label>
@@ -458,15 +469,15 @@ const handleSubmit = async (e) => {
                   {errors.address}
                 </p>
               )}
-
             </div>
 
             {/* DATE + TIME */}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-              <div>
+              {/* DATE */}
 
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Appointment Date
                 </label>
@@ -489,11 +500,11 @@ const handleSubmit = async (e) => {
                     {errors.date}
                   </p>
                 )}
-
               </div>
 
-              <div>
+              {/* TIME */}
 
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Appointment Time
                 </label>
@@ -508,18 +519,33 @@ const handleSubmit = async (e) => {
                       : "border-gray-300 focus:border-orange-500"
                   }`}
                 >
-
                   <option value="">
                     Select time
                   </option>
 
-                  <option value="09:00 AM">09:00 AM</option>
-                  <option value="11:00 AM">11:00 AM</option>
-                  <option value="01:00 PM">01:00 PM</option>
-                  <option value="03:00 PM">03:00 PM</option>
-                  <option value="05:00 PM">05:00 PM</option>
-                  <option value="07:00 PM">07:00 PM</option>
+                  <option value="09:00 AM">
+                    09:00 AM
+                  </option>
 
+                  <option value="11:00 AM">
+                    11:00 AM
+                  </option>
+
+                  <option value="01:00 PM">
+                    01:00 PM
+                  </option>
+
+                  <option value="03:00 PM">
+                    03:00 PM
+                  </option>
+
+                  <option value="05:00 PM">
+                    05:00 PM
+                  </option>
+
+                  <option value="07:00 PM">
+                    07:00 PM
+                  </option>
                 </select>
 
                 {errors.time && (
@@ -527,7 +553,6 @@ const handleSubmit = async (e) => {
                     {errors.time}
                   </p>
                 )}
-
               </div>
 
             </div>
@@ -535,7 +560,6 @@ const handleSubmit = async (e) => {
             {/* INSTRUCTIONS */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Additional Instructions
                 <span className="text-gray-400 font-normal">
@@ -551,7 +575,6 @@ const handleSubmit = async (e) => {
                 placeholder="Any specific instructions for the professional?"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none resize-none focus:border-orange-500"
               />
-
             </div>
 
             {/* PRICE */}
@@ -559,7 +582,6 @@ const handleSubmit = async (e) => {
             <div className="bg-orange-50 border border-orange-100 rounded-xl p-5">
 
               <div className="flex justify-between">
-
                 <span className="text-gray-600">
                   Service Price
                 </span>
@@ -567,13 +589,11 @@ const handleSubmit = async (e) => {
                 <span className="font-bold text-blue-900">
                   ₹{service.price}
                 </span>
-
               </div>
 
               <div className="border-t border-orange-200 my-3"></div>
 
               <div className="flex justify-between">
-
                 <span className="font-semibold text-gray-700">
                   Total Amount
                 </span>
@@ -581,7 +601,6 @@ const handleSubmit = async (e) => {
                 <span className="text-xl font-bold text-orange-500">
                   ₹{service.price}
                 </span>
-
               </div>
 
             </div>
@@ -597,15 +616,15 @@ const handleSubmit = async (e) => {
                   : "bg-orange-500 hover:bg-orange-600"
               }`}
             >
-              {loading ? "Creating Booking..." : "Confirm Booking"}
+              {loading
+                ? "Creating Booking..."
+                : "Confirm Booking"}
             </button>
 
           </form>
-
         </div>
 
       </div>
-
     </section>
   );
 }

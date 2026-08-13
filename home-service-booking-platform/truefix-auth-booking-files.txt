@@ -1,0 +1,2298 @@
+===== server/controllers/authController.js =====
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+
+// Register user
+const registerUser = async (req, res) => {
+  try {
+    const { name, email, phone, password, role } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User already exists",
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = await User.create({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      role: role || "customer",
+    });
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Registration failed",
+      error: error.message,
+    });
+  }
+};
+
+// Login user
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // Check password
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Login failed",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+};
+===== server/routes/authRoutes.js =====
+const express = require("express");
+const router = express.Router();
+
+const {
+  registerUser,
+  loginUser,
+} = require("../controllers/authController");
+
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+
+module.exports = router;
+===== server/models/User.js =====
+const mongoose = require("mongoose");
+
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+    },
+
+    role: {
+      type: String,
+      enum: ["customer", "admin"],
+      default: "customer",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("User", userSchema);
+===== server/utils/generateToken.js =====
+const jwt = require("jsonwebtoken");
+
+const generateToken = (user) => {
+  return jwt.sign(
+    {
+      userId: user._id,
+      role: user.role,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d",
+    }
+  );
+};
+
+module.exports = generateToken;
+===== server/middleware/authMiddleware.js =====
+const jwt = require("jsonwebtoken");
+
+const authMiddleware = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    req.user = decoded;
+
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
+  }
+};
+
+module.exports = authMiddleware;
+===== server/middleware/adminMiddleware.js =====
+const adminMiddleware = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      message: "Authentication required",
+    });
+  }
+
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "Admin access required",
+    });
+  }
+
+  next();
+};
+
+module.exports = adminMiddleware;
+===== client/src/context/AuthContext.jsx =====
+import { createContext, useContext, useState } from "react";
+
+import {
+  register as registerUser,
+  login as loginUser,
+  logout as logoutUser,
+  getCurrentUser,
+} from "../services/authService";
+
+const AuthContext = createContext();
+
+export function AuthProvider({ children }) {
+  // =========================
+  // CURRENT LOGGED-IN USER
+  // =========================
+
+  const [user, setUser] = useState(() => {
+    return getCurrentUser();
+  });
+
+  // =========================
+  // REGISTER
+  // =========================
+
+  const register = async (userData) => {
+    try {
+      const data = await registerUser(userData);
+
+      return {
+        success: true,
+        user: data.user,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          error.message || "Registration failed.",
+      };
+    }
+  };
+
+  // =========================
+  // LOGIN
+  // =========================
+
+  const login = async (email, password) => {
+    try {
+      const data = await loginUser({
+        email,
+        password,
+      });
+
+      setUser(data.user);
+
+      return {
+        success: true,
+        user: data.user,
+        token: data.token,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || "Login failed.",
+      };
+    }
+  };
+
+  // =========================
+  // LOGOUT
+  // =========================
+
+  const logout = () => {
+    logoutUser();
+    setUser(null);
+  };
+
+  // =========================
+  // AUTH STATUS
+  // =========================
+
+  const isAuthenticated = !!user;
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        register,
+        login,
+        logout,
+        isAuthenticated,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+===== client/src/services/authService.js =====
+import { apiRequest } from "./api";
+
+// Register a new customer
+export const register = async (userData) => {
+  return await apiRequest("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+};
+
+// Login existing user
+export const login = async (credentials) => {
+  const data = await apiRequest("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(credentials),
+  });
+
+  // Save authentication information
+  if (data.token) {
+    localStorage.setItem("token", data.token);
+  }
+
+  if (data.user) {
+    localStorage.setItem("user", JSON.stringify(data.user));
+  }
+
+  return data;
+};
+
+// Logout
+export const logout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+};
+
+// Get currently stored user
+export const getCurrentUser = () => {
+  const user = localStorage.getItem("user");
+
+  if (!user) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(user);
+  } catch (error) {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    return null;
+  }
+};
+
+// Check whether a JWT exists
+export const isAuthenticated = () => {
+  return Boolean(localStorage.getItem("token"));
+};
+===== client/src/services/api.js =====
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+
+export const apiRequest = async (endpoint, options = {}) => {
+  const token = localStorage.getItem("token");
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || "Something went wrong");
+  }
+
+  return data;
+};
+
+export default API_BASE_URL;
+===== server/models/Booking.js =====
+const mongoose = require("mongoose");
+
+const bookingSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    service: {
+      type: String,
+      required: true,
+    },
+
+    price: {
+      type: Number,
+      required: true,
+    },
+
+    customerName: {
+      type: String,
+      required: true,
+    },
+
+    phone: {
+      type: String,
+      required: true,
+    },
+
+    date: {
+      type: String,
+      required: true,
+    },
+
+    time: {
+      type: String,
+      required: true,
+    },
+
+    address: {
+      type: String,
+      required: true,
+    },
+
+    notes: {
+      type: String,
+      default: "",
+    },
+
+    status: {
+      type: String,
+      enum: [
+        "Pending",
+        "Confirmed",
+        "Completed",
+        "Cancelled",
+      ],
+      default: "Pending",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("Booking", bookingSchema);
+===== server/controllers/bookingController.js =====
+const Booking = require("../models/Booking");
+
+// ==========================================
+// CREATE BOOKING
+// ==========================================
+
+const createBooking = async (req, res) => {
+  console.log("AUTH USER:", req.user);
+  try {
+    const {
+      service,
+      price,
+      customerName,
+      phone,
+      date,
+      time,
+      address,
+      notes,
+    } = req.body;
+    
+    const userId = req.user.userId;
+
+    if (
+      !service ||
+      price === undefined ||
+      !customerName ||
+      !phone ||
+      !date ||
+      !time ||
+      !address
+    ) {
+      return res.status(400).json({
+        message: "Please provide all required booking details.",
+      });
+    }
+
+    const booking = await Booking.create({
+      user: req.user.userId,
+      service,
+      price,
+      customerName,
+      phone,
+      date,
+      time,
+      address,
+      notes,
+    });
+
+    res.status(201).json({
+      message: "Booking created successfully",
+      booking,
+    });
+
+  } catch (error) {
+    console.error("Create booking error:", error);
+
+    res.status(500).json({
+      message: "Failed to create booking",
+      error: error.message,
+    });
+  }
+};
+
+
+// ==========================================
+// GET ALL BOOKINGS
+// ==========================================
+
+const getBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find().sort({
+      createdAt: -1,
+    });
+
+    res.status(200).json(bookings);
+
+  } catch (error) {
+    console.error("Get bookings error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch bookings",
+      error: error.message,
+    });
+  }
+};
+
+// ============================================
+// GET MY BOOKINGS
+// ============================================
+
+const getMyBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      user: req.user.userId,
+    }).sort({
+      createdAt: -1,
+    });
+
+    res.status(200).json(bookings);
+  } catch (error) {
+    console.error("Get my bookings error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch your bookings",
+      error: error.message,
+    });
+  }
+};
+
+
+// ==========================================
+// UPDATE BOOKING STATUS
+// ==========================================
+
+const updateBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = [
+      "Pending",
+      "Confirmed",
+      "Completed",
+      "Cancelled",
+    ];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid booking status.",
+      });
+    }
+
+    const booking = await Booking.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Booking status updated successfully",
+      booking,
+    });
+
+  } catch (error) {
+    console.error("Update booking status error:", error);
+
+    res.status(500).json({
+      message: "Failed to update booking status",
+      error: error.message,
+    });
+  }
+};
+
+// ========================================
+// CANCEL BOOKING
+// ========================================
+
+const cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find the booking
+        const booking = await Booking.findById(id);
+
+        if (!booking) {
+            return res.status(404).json({
+                message: "Booking not found"
+            });
+        }
+
+        // Make sure the booking is linked to a user
+        if (!booking.user) {
+            return res.status(400).json({
+                message: "This booking is not linked to a user"
+            });
+        }
+
+        // Only the owner can cancel the booking
+        if (booking.user.toString() !== req.user.userId.toString()) {
+            return res.status(403).json({
+                message: "You are not authorized to cancel this booking"
+            });
+        }
+
+        // Only pending bookings can be cancelled
+        if (booking.status !== "Pending") {
+            return res.status(400).json({
+                message: "Booking cannot be cancelled because its current status is not Pending"
+            });
+        }
+
+        // Change status instead of deleting the booking
+        booking.status = "Cancelled";
+
+        await booking.save();
+
+        return res.status(200).json({
+            message: "Booking cancelled successfully",
+            booking
+        });
+
+    } catch (error) {
+        console.error("Cancel booking error:", error);
+
+        return res.status(500).json({
+            message: "Failed to cancel booking",
+            error: error.message
+        });
+    }
+};
+
+
+// ========================================
+// EXPORT CONTROLLERS
+// ========================================
+
+module.exports = {
+    createBooking,
+    getBookings,
+    getMyBookings,
+    updateBookingStatus,
+    cancelBooking
+};
+===== server/routes/bookingRoutes.js =====
+const express = require("express");
+
+const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
+
+const {
+  createBooking,
+  getBookings,
+  getMyBookings,
+  updateBookingStatus,
+  cancelBooking,
+} = require("../controllers/bookingController");
+
+const router = express.Router();
+
+// Create booking
+router.post("/", authMiddleware, createBooking);
+
+// Get all bookings
+router.get("/", authMiddleware, getBookings);
+
+// Get my bookings
+router.get("/my", authMiddleware, getMyBookings);
+
+// Update booking status - ADMIN ONLY
+router.put(
+  "/:id/status",
+  authMiddleware,
+  adminMiddleware,
+  updateBookingStatus
+);
+
+// Cancel booking
+router.patch("/:id/cancel", authMiddleware, cancelBooking);
+
+module.exports = router;
+===== server/server.js =====
+const dns = require("dns");
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+
+const connectDB = require("./config/db");
+const bookingRoutes = require("./routes/bookingRoutes");
+const authRoutes = require("./routes/authRoutes");
+
+dotenv.config();
+
+const app = express();
+
+// Connect MongoDB
+connectDB();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Test route
+app.get("/", (req, res) => {
+  res.send("TrueFix Server Running");
+});
+
+// Booking routes
+app.use("/api/bookings", bookingRoutes);
+
+// Auth routes
+app.use("/api/auth", authRoutes);
+
+// Server
+const PORT = process.env.PORT || 5001;
+
+app.listen(PORT, () => {
+  console.log(`TrueFix server running at http://127.0.0.1:${PORT}`);
+});
+===== client/src/pages/BookService/BookService.jsx =====
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+
+const API_URL = "http://localhost:5001/api";
+
+function BookService() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const { user, isAuthenticated } = useAuth();
+
+  const service = location.state?.service;
+
+  const [formData, setFormData] = useState({
+    customerName: user?.name || "",
+    phone: "",
+    address: "",
+    date: "",
+    time: "",
+    instructions: "",
+  });
+
+  const [errors, setErrors] = useState({});
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  // --------------------------------
+  // UPDATE CUSTOMER NAME
+  // --------------------------------
+
+  useEffect(() => {
+    if (user?.name) {
+      setFormData((prev) => ({
+        ...prev,
+        customerName: user.name,
+      }));
+    }
+  }, [user]);
+
+  // --------------------------------
+  // SCROLL TO TOP AFTER CONFIRMATION
+  // --------------------------------
+
+  useEffect(() => {
+    if (bookingConfirmed) {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "instant",
+      });
+    }
+  }, [bookingConfirmed]);
+
+  // --------------------------------
+  // SERVICE NOT FOUND
+  // --------------------------------
+
+  if (!service) {
+    return (
+      <section className="min-h-screen bg-gray-100 py-12 px-4">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-md p-8 text-center">
+          <h1 className="text-2xl font-bold text-blue-900 mb-3">
+            Service Not Found
+          </h1>
+
+          <p className="text-gray-600 mb-6">
+            Please select a service before booking.
+          </p>
+
+          <button
+            onClick={() => navigate("/services")}
+            className="bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
+          >
+            Browse Services
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  // --------------------------------
+  // LOGIN REQUIRED
+  // --------------------------------
+
+  if (!isAuthenticated) {
+    return (
+      <section className="min-h-screen bg-gray-100 py-12 px-4">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-md p-8 text-center">
+          <h1 className="text-2xl font-bold text-blue-900 mb-3">
+            Login Required
+          </h1>
+
+          <p className="text-gray-600 mb-6">
+            Please login before booking a service.
+          </p>
+
+          <button
+            onClick={() => navigate("/login")}
+            className="bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
+          >
+            Go to Login
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  // --------------------------------
+  // HANDLE INPUT
+  // --------------------------------
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+
+    setApiError("");
+  };
+
+  // --------------------------------
+  // VALIDATION
+  // --------------------------------
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.customerName.trim()) {
+      newErrors.customerName = "Booking person name is required";
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^[0-9]{10}$/.test(formData.phone)) {
+      newErrors.phone = "Enter a valid 10-digit phone number";
+    }
+
+    if (!formData.address.trim()) {
+      newErrors.address = "Address is required";
+    }
+
+    if (!formData.date) {
+      newErrors.date = "Please select a date";
+    }
+
+    if (!formData.time) {
+      newErrors.time = "Please select a time";
+    }
+
+    return newErrors;
+  };
+
+  // --------------------------------
+  // CONFIRM BOOKING
+  // --------------------------------
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const validationErrors = validateForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setLoading(true);
+    setApiError("");
+
+    try {
+      // -----------------------------
+      // BOOKING DATA
+      // -----------------------------
+
+      const bookingData = {
+        service: service.name,
+        price: service.price,
+        customerName: formData.customerName,
+        phone: formData.phone,
+        date: formData.date,
+        time: formData.time,
+        address: formData.address,
+        notes: formData.instructions,
+      };
+
+      console.log("Sending booking:", bookingData);
+
+      // -----------------------------
+      // GET JWT TOKEN
+      // -----------------------------
+
+      const token = localStorage.getItem("token");
+
+      console.log("Token exists:", Boolean(token));
+
+      if (!token) {
+        throw new Error(
+          "Authentication token not found. Please login again."
+        );
+      }
+
+      // -----------------------------
+      // SEND BOOKING TO BACKEND
+      // -----------------------------
+
+      const response = await fetch(`${API_URL}/bookings`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        body: JSON.stringify(bookingData),
+      });
+
+      const data = await response.json();
+
+      console.log("Booking API response:", data);
+
+      // -----------------------------
+      // HANDLE API ERROR
+      // -----------------------------
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to create booking"
+        );
+      }
+
+      // -----------------------------
+      // SUCCESS
+      // -----------------------------
+
+      setBookingConfirmed(true);
+
+      setTimeout(() => {
+        navigate("/my-bookings");
+      }, 2000);
+
+    } catch (error) {
+      console.error("Booking error:", error);
+
+      setApiError(
+        error.message ||
+          "Something went wrong while creating the booking."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --------------------------------
+  // SUCCESS SCREEN
+  // --------------------------------
+
+  if (bookingConfirmed) {
+    return (
+      <section className="min-h-screen bg-gray-100 py-12 px-4 flex items-start justify-center">
+        <div className="w-full max-w-lg">
+          <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-12 text-center">
+
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
+                <span className="text-white text-4xl font-bold">
+                  ✓
+                </span>
+              </div>
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl font-bold text-blue-900">
+              Booking Confirmed!
+            </h1>
+
+            <p className="text-gray-600 mt-4 text-lg">
+              Your service booking has been successfully created.
+            </p>
+
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mt-6">
+              <p className="text-sm text-gray-500">
+                Service
+              </p>
+
+              <p className="text-lg font-bold text-blue-900 mt-1">
+                {service.name}
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-sm text-gray-500">
+                Booking Person
+              </p>
+
+              <p className="font-semibold text-gray-800 mt-1">
+                {formData.customerName}
+              </p>
+            </div>
+
+            <p className="text-gray-500 text-sm mt-8">
+              Redirecting you to My Bookings...
+            </p>
+
+            <div className="mt-4 flex justify-center">
+              <div className="w-8 h-8 border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin"></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // --------------------------------
+  // BOOKING FORM
+  // --------------------------------
+
+  return (
+    <section className="min-h-screen bg-gray-100 py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+
+        {/* PAGE HEADER */}
+
+        <div className="text-center mb-8">
+          <p className="text-orange-500 font-semibold">
+            BOOK YOUR SERVICE
+          </p>
+
+          <h1 className="text-3xl sm:text-4xl font-bold text-blue-900 mt-2">
+            Book {service.name}
+          </h1>
+
+          <p className="text-gray-600 mt-3">
+            Enter your details and choose a convenient appointment.
+          </p>
+        </div>
+
+        {/* API ERROR */}
+
+        {apiError && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
+            {apiError}
+          </div>
+        )}
+
+        {/* SERVICE SUMMARY */}
+
+        <div className="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+
+          <img
+            src={service.image}
+            alt={service.name}
+            className="w-full h-52 object-cover"
+          />
+
+          <div className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+            <div>
+              <h2 className="text-xl font-bold text-blue-900">
+                {service.name}
+              </h2>
+
+              <p className="text-gray-500 mt-1">
+                Professional home service
+              </p>
+            </div>
+
+            <p className="text-orange-500 text-xl font-bold">
+              ₹{service.price}
+            </p>
+
+          </div>
+        </div>
+
+        {/* FORM */}
+
+        <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-5"
+          >
+
+            {/* NAME */}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Booking Person Name
+              </label>
+
+              <input
+                type="text"
+                name="customerName"
+                value={formData.customerName}
+                onChange={handleChange}
+                placeholder="Enter booking person's name"
+                className={`w-full px-4 py-3 border rounded-xl outline-none ${
+                  errors.customerName
+                    ? "border-red-500"
+                    : "border-gray-300 focus:border-orange-500"
+                }`}
+              />
+
+              {errors.customerName && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.customerName}
+                </p>
+              )}
+            </div>
+
+            {/* PHONE */}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Phone Number
+              </label>
+
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="Enter 10-digit phone number"
+                maxLength="10"
+                className={`w-full px-4 py-3 border rounded-xl outline-none ${
+                  errors.phone
+                    ? "border-red-500"
+                    : "border-gray-300 focus:border-orange-500"
+                }`}
+              />
+
+              {errors.phone && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.phone}
+                </p>
+              )}
+            </div>
+
+            {/* ADDRESS */}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Service Address
+              </label>
+
+              <textarea
+                name="address"
+                rows="3"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Enter complete service address"
+                className={`w-full px-4 py-3 border rounded-xl outline-none resize-none ${
+                  errors.address
+                    ? "border-red-500"
+                    : "border-gray-300 focus:border-orange-500"
+                }`}
+              />
+
+              {errors.address && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.address}
+                </p>
+              )}
+            </div>
+
+            {/* DATE + TIME */}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+              {/* DATE */}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Appointment Date
+                </label>
+
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                  min={new Date().toISOString().split("T")[0]}
+                  className={`w-full px-4 py-3 border rounded-xl outline-none ${
+                    errors.date
+                      ? "border-red-500"
+                      : "border-gray-300 focus:border-orange-500"
+                  }`}
+                />
+
+                {errors.date && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.date}
+                  </p>
+                )}
+              </div>
+
+              {/* TIME */}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Appointment Time
+                </label>
+
+                <select
+                  name="time"
+                  value={formData.time}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-xl outline-none ${
+                    errors.time
+                      ? "border-red-500"
+                      : "border-gray-300 focus:border-orange-500"
+                  }`}
+                >
+                  <option value="">
+                    Select time
+                  </option>
+
+                  <option value="09:00 AM">
+                    09:00 AM
+                  </option>
+
+                  <option value="11:00 AM">
+                    11:00 AM
+                  </option>
+
+                  <option value="01:00 PM">
+                    01:00 PM
+                  </option>
+
+                  <option value="03:00 PM">
+                    03:00 PM
+                  </option>
+
+                  <option value="05:00 PM">
+                    05:00 PM
+                  </option>
+
+                  <option value="07:00 PM">
+                    07:00 PM
+                  </option>
+                </select>
+
+                {errors.time && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.time}
+                  </p>
+                )}
+              </div>
+
+            </div>
+
+            {/* INSTRUCTIONS */}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Additional Instructions
+                <span className="text-gray-400 font-normal">
+                  {" "} (Optional)
+                </span>
+              </label>
+
+              <textarea
+                name="instructions"
+                rows="4"
+                value={formData.instructions}
+                onChange={handleChange}
+                placeholder="Any specific instructions for the professional?"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none resize-none focus:border-orange-500"
+              />
+            </div>
+
+            {/* PRICE */}
+
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-5">
+
+              <div className="flex justify-between">
+                <span className="text-gray-600">
+                  Service Price
+                </span>
+
+                <span className="font-bold text-blue-900">
+                  ₹{service.price}
+                </span>
+              </div>
+
+              <div className="border-t border-orange-200 my-3"></div>
+
+              <div className="flex justify-between">
+                <span className="font-semibold text-gray-700">
+                  Total Amount
+                </span>
+
+                <span className="text-xl font-bold text-orange-500">
+                  ₹{service.price}
+                </span>
+              </div>
+
+            </div>
+
+            {/* BUTTON */}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full text-white py-3.5 rounded-xl font-semibold shadow-md transition ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-orange-500 hover:bg-orange-600"
+              }`}
+            >
+              {loading
+                ? "Creating Booking..."
+                : "Confirm Booking"}
+            </button>
+
+          </form>
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+export default BookService;
+===== client/src/pages/MyBookings/MyBookings.jsx =====
+import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+
+import {
+  getMyBookings,
+  cancelBooking as cancelBookingApi,
+} from "../../services/bookingService";
+
+function MyBookings() {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // =========================
+  // FETCH MY BOOKINGS
+  // =========================
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getMyBookings();
+
+      /*
+        Backend may return:
+
+        {
+          bookings: [...]
+        }
+
+        or directly:
+
+        [...]
+      */
+
+      setBookings(data.bookings || data);
+    } catch (error) {
+      console.error(
+        "Fetch bookings error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Unable to load bookings."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =========================
+  // LOAD BOOKINGS
+  // =========================
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  // =========================
+  // CANCEL BOOKING
+  // =========================
+
+  const cancelBooking = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this booking?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await cancelBookingApi(id);
+
+      // Update UI immediately
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking._id === id
+            ? {
+                ...booking,
+                status: "Cancelled",
+              }
+            : booking
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Cancel booking error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Unable to cancel booking."
+      );
+    }
+  };
+
+  // =========================
+  // STATUS STYLE
+  // =========================
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case "Confirmed":
+        return "bg-green-100 text-green-700";
+
+      case "Completed":
+        return "bg-blue-100 text-blue-700";
+
+      case "Cancelled":
+        return "bg-red-100 text-red-700";
+
+      case "Pending":
+      default:
+        return "bg-yellow-100 text-yellow-700";
+    }
+  };
+
+  // =========================
+  // LOADING
+  // =========================
+
+  if (loading) {
+    return (
+      <section className="min-h-screen bg-gray-50 py-16">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <div className="text-4xl mb-4">
+            ⏳
+          </div>
+
+          <h1 className="text-2xl font-bold text-blue-900">
+            Loading bookings...
+          </h1>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-5xl mx-auto px-4">
+
+        {/* =========================
+            HEADER
+        ========================= */}
+
+        <div className="text-center mb-10">
+
+          <h1 className="text-3xl sm:text-4xl font-bold text-blue-900">
+            My Bookings
+          </h1>
+
+          <p className="text-gray-600 mt-2">
+            View and manage your TrueFix
+            service bookings
+          </p>
+
+        </div>
+
+        {/* =========================
+            ERROR
+        ========================= */}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* =========================
+            SUMMARY
+        ========================= */}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+
+          {/* TOTAL */}
+
+          <div className="bg-white rounded-xl shadow p-5 text-center">
+
+            <p className="text-2xl font-bold text-blue-900">
+              {bookings.length}
+            </p>
+
+            <p className="text-gray-500 text-sm mt-1">
+              Total
+            </p>
+
+          </div>
+
+          {/* PENDING */}
+
+          <div className="bg-white rounded-xl shadow p-5 text-center">
+
+            <p className="text-2xl font-bold text-yellow-500">
+              {
+                bookings.filter(
+                  (booking) =>
+                    booking.status ===
+                    "Pending"
+                ).length
+              }
+            </p>
+
+            <p className="text-gray-500 text-sm mt-1">
+              Pending
+            </p>
+
+          </div>
+
+          {/* CONFIRMED */}
+
+          <div className="bg-white rounded-xl shadow p-5 text-center">
+
+            <p className="text-2xl font-bold text-green-600">
+              {
+                bookings.filter(
+                  (booking) =>
+                    booking.status ===
+                    "Confirmed"
+                ).length
+              }
+            </p>
+
+            <p className="text-gray-500 text-sm mt-1">
+              Confirmed
+            </p>
+
+          </div>
+
+          {/* CANCELLED */}
+
+          <div className="bg-white rounded-xl shadow p-5 text-center">
+
+            <p className="text-2xl font-bold text-red-600">
+              {
+                bookings.filter(
+                  (booking) =>
+                    booking.status ===
+                    "Cancelled"
+                ).length
+              }
+            </p>
+
+            <p className="text-gray-500 text-sm mt-1">
+              Cancelled
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* =========================
+            EMPTY STATE
+        ========================= */}
+
+        {bookings.length === 0 ? (
+
+          <div className="bg-white rounded-xl shadow-md p-10 text-center">
+
+            <div className="text-5xl mb-4">
+              📅
+            </div>
+
+            <h2 className="text-2xl font-semibold text-gray-800">
+              No Bookings Yet
+            </h2>
+
+            <p className="text-gray-500 mt-2 mb-6">
+              You haven't booked any home
+              services yet.
+            </p>
+
+            <Link
+              to="/services"
+              className="inline-block bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600"
+            >
+              Book a Service
+            </Link>
+
+          </div>
+
+        ) : (
+
+          <div className="space-y-6">
+
+            {bookings.map((booking) => (
+
+              <div
+                key={booking._id}
+                className="bg-white rounded-xl shadow-md p-5 sm:p-6"
+              >
+
+                {/* =========================
+                    TOP
+                ========================= */}
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+                  <div>
+
+                    <p className="text-sm text-gray-500">
+                      Booking ID:{" "}
+                      TF
+                      {booking._id
+                        ?.slice(-6)
+                        .toUpperCase()}
+                    </p>
+
+                    <h2 className="text-xl sm:text-2xl font-bold text-blue-900 mt-1">
+                      {booking.service}
+                    </h2>
+
+                  </div>
+
+                  <span
+                    className={`w-fit px-4 py-2 rounded-full text-sm font-semibold ${getStatusStyle(
+                      booking.status
+                    )}`}
+                  >
+                    {booking.status}
+                  </span>
+
+                </div>
+
+                {/* =========================
+                    DETAILS
+                ========================= */}
+
+                <div className="border-t border-gray-200 mt-5 pt-5">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+                    {/* DATE */}
+
+                    <div>
+
+                      <p className="text-sm text-gray-500">
+                        Service Date
+                      </p>
+
+                      <p className="font-medium text-gray-800 mt-1">
+                        {booking.date}
+                      </p>
+
+                    </div>
+
+                    {/* TIME */}
+
+                    <div>
+
+                      <p className="text-sm text-gray-500">
+                        Service Time
+                      </p>
+
+                      <p className="font-medium text-gray-800 mt-1">
+                        {booking.time}
+                      </p>
+
+                    </div>
+
+                    {/* ADDRESS */}
+
+                    <div>
+
+                      <p className="text-sm text-gray-500">
+                        Address
+                      </p>
+
+                      <p className="font-medium text-gray-800 mt-1">
+                        {booking.address}
+                      </p>
+
+                    </div>
+
+                    {/* PRICE */}
+
+                    <div>
+
+                      <p className="text-sm text-gray-500">
+                        Price
+                      </p>
+
+                      <p className="font-bold text-orange-500 text-lg mt-1">
+                        ₹{booking.price}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                {/* =========================
+                    ACTIONS
+                ========================= */}
+
+                <div className="border-t border-gray-200 mt-5 pt-5 flex flex-col sm:flex-row gap-3">
+
+                  {/* BOOK ANOTHER */}
+
+                  <Link
+                    to="/services"
+                    className="text-center bg-blue-900 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-800"
+                  >
+                    Book Another Service
+                  </Link>
+
+                  {/* CANCEL */}
+
+                  {booking.status !==
+                    "Cancelled" &&
+                    booking.status !==
+                      "Completed" && (
+
+                      <button
+                        onClick={() =>
+                          cancelBooking(
+                            booking._id
+                          )
+                        }
+                        className="bg-red-500 text-white px-5 py-3 rounded-lg font-semibold hover:bg-red-600"
+                      >
+                        Cancel Booking
+                      </button>
+
+                    )}
+
+                  {/* PROFILE */}
+
+                  <Link
+                    to="/profile"
+                    className="text-center bg-gray-200 text-gray-700 px-5 py-3 rounded-lg font-semibold hover:bg-gray-300"
+                  >
+                    My Profile
+                  </Link>
+
+                </div>
+
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
+
+      </div>
+    </section>
+  );
+}
+
+export default MyBookings;
+===== client/src/pages/Admin/AdminDashboard.jsx =====
+import { useEffect, useState } from "react";
+
+const API_URL = "http://127.0.0.1:5001/api";
+
+function AdminDashboard() {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(`${API_URL}/bookings`);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to fetch bookings"
+        );
+      }
+
+      setBookings(data);
+    } catch (error) {
+      console.error("Fetch bookings error:", error);
+      setError(error.message || "Failed to load bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const updateBookingStatus = async (id, status) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/bookings/${id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to update booking"
+        );
+      }
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking._id === id
+            ? { ...booking, status }
+            : booking
+        )
+      );
+    } catch (error) {
+      console.error("Update booking error:", error);
+      alert(error.message || "Failed to update booking");
+    }
+  };
+
+  const deleteBooking = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this booking?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/bookings/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to cancel booking"
+        );
+      }
+
+      setBookings((prev) =>
+        prev.filter((booking) => booking._id !== id)
+      );
+    } catch (error) {
+      console.error("Cancel booking error:", error);
+      alert(error.message || "Failed to cancel booking");
+    }
+  };
+
+  const totalBookings = bookings.length;
+
+  const pendingBookings = bookings.filter(
+    (booking) => booking.status === "Pending"
+  ).length;
+
+  const confirmedBookings = bookings.filter(
+    (booking) => booking.status === "Confirmed"
+  ).length;
+
+  const completedBookings = bookings.filter(
+    (booking) => booking.status === "Completed"
+  ).length;
+
+  const cancelledBookings = bookings.filter(
+    (booking) => booking.status === "Cancelled"
+  ).length;
+
+  return (
+    <section className="min-h-screen bg-gray-50 py-10 px-4">
+      <div className="max-w-7xl mx-auto">
+
+        {/* HEADER */}
+        <div className="mb-8">
+          <p className="text-orange-500 font-semibold">
+            TRUEFIX ADMIN
+          </p>
+
+          <h1 className="text-3xl sm:text-4xl font-bold text-blue-900 mt-1">
+            Admin Dashboard
+          </h1>
+
+          <p className="text-gray-600 mt-2">
+            Manage customer service bookings.
+          </p>
+        </div>
+
+        {/* ERROR */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* STATISTICS */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500 text-sm">
+              Total
+            </p>
+            <p className="text-3xl font-bold text-blue-900 mt-1">
+              {totalBookings}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500 text-sm">
+              Pending
+            </p>
+            <p className="text-3xl font-bold text-yellow-500 mt-1">
+              {pendingBookings}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500 text-sm">
+              Confirmed
+            </p>
+            <p className="text-3xl font-bold text-green-600 mt-1">
+              {confirmedBookings}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500 text-sm">
+              Completed
+            </p>
+            <p className="text-3xl font-bold text-blue-600 mt-1">
+              {completedBookings}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500 text-sm">
+              Cancelled
+            </p>
+            <p className="text-3xl font-bold text-red-500 mt-1">
+              {cancelledBookings}
+            </p>
+          </div>
+
+        </div>
+
+        {/* BOOKINGS */}
+        <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+
+          <div className="p-6 border-b">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+              <div>
+                <h2 className="text-xl font-bold text-blue-900">
+                  All Bookings
+                </h2>
+
+                <p className="text-gray-500 text-sm mt-1">
+                  View and manage all TrueFix bookings.
+                </p>
+              </div>
+
+              <button
+                onClick={fetchBookings}
+                className="bg-blue-900 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-800"
+              >
+                Refresh
+              </button>
+
+            </div>
+          </div>
+
+          {loading ? (
+
+            <div className="p-10 text-center">
+              <div className="w-10 h-10 mx-auto border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin"></div>
+
+              <p className="text-gray-500 mt-4">
+                Loading bookings...
+              </p>
+            </div>
+
+          ) : bookings.length === 0 ? (
+
+            <div className="p-10 text-center">
+              <div className="text-5xl mb-4">
+                📅
+              </div>
+
+              <h3 className="text-xl font-semibold text-gray-800">
+                No bookings found
+              </h3>
+
+              <p className="text-gray-500 mt-2">
+                Customer bookings will appear here.
+              </p>
+            </div>
+
+          ) : (
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full min-w-[1000px]">
+
+                <thead className="bg-gray-50">
+                  <tr>
+
+                    <th className="text-left px-5 py-4 text-sm font-semibold text-gray-600">
+                      Customer
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-sm font-semibold text-gray-600">
+                      Service
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-sm font-semibold text-gray-600">
+                      Date / Time
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-sm font-semibold text-gray-600">
+                      Price
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-sm font-semibold text-gray-600">
+                      Status
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-sm font-semibold text-gray-600">
+                      Actions
+                    </th>
+
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y">
+
+                  {bookings.map((booking) => (
+
+                    <tr key={booking._id}>
+
+                      <td className="px-5 py-4">
+
+                        <p className="font-semibold text-gray-800">
+                          {booking.customerName}
+                        </p>
+
+                        <p className="text-sm text-gray-500">
+                          {booking.phone}
+                        </p>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <p className="font-semibold text-blue-900">
+                          {booking.service}
+                        </p>
+
+                        <p className="text-sm text-gray-500">
+                          {booking.address}
+                        </p>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <p className="font-medium text-gray-800">
+                          {booking.date}
+                        </p>
+
+                        <p className="text-sm text-gray-500">
+                          {booking.time}
+                        </p>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <p className="font-bold text-orange-500">
+                          ₹{booking.price}
+                        </p>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <select
+                          value={booking.status}
+                          onChange={(e) =>
+                            updateBookingStatus(
+                              booking._id,
+                              e.target.value
+                            )
+                          }
+                          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        >
+                          <option value="Pending">
+                            Pending
+                          </option>
+
+                          <option value="Confirmed">
+                            Confirmed
+                          </option>
+
+                          <option value="Completed">
+                            Completed
+                          </option>
+
+                          <option value="Cancelled">
+                            Cancelled
+                          </option>
+                        </select>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <button
+                          onClick={() =>
+                            deleteBooking(booking._id)
+                          }
+                          className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-semibold hover:bg-red-200"
+                        >
+                          Cancel
+                        </button>
+
+                      </td>
+
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
+
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+export default AdminDashboard;
+===== client/src/App.jsx =====
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "./routes/AppRoutes";
+import { AuthProvider } from "./context/AuthContext";
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;

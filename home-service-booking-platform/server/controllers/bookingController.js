@@ -162,57 +162,82 @@ const updateBookingStatus = async (req, res) => {
 // ========================================
 
 const cancelBooking = async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        // Find the booking
-        const booking = await Booking.findById(id);
+    // Find booking
+    const booking = await Booking.findById(id);
 
-        if (!booking) {
-            return res.status(404).json({
-                message: "Booking not found"
-            });
-        }
-
-        // Make sure the booking is linked to a user
-        if (!booking.user) {
-            return res.status(400).json({
-                message: "This booking is not linked to a user"
-            });
-        }
-
-        // Only the owner can cancel the booking
-        if (booking.user.toString() !== req.user.userId.toString()) {
-            return res.status(403).json({
-                message: "You are not authorized to cancel this booking"
-            });
-        }
-
-        // Only pending bookings can be cancelled
-        if (booking.status !== "Pending") {
-            return res.status(400).json({
-                message: "Booking cannot be cancelled because its current status is not Pending"
-            });
-        }
-
-        // Change status instead of deleting the booking
-        booking.status = "Cancelled";
-
-        await booking.save();
-
-        return res.status(200).json({
-            message: "Booking cancelled successfully",
-            booking
-        });
-
-    } catch (error) {
-        console.error("Cancel booking error:", error);
-
-        return res.status(500).json({
-            message: "Failed to cancel booking",
-            error: error.message
-        });
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found",
+      });
     }
+
+    // ========================================
+    // ADMIN CAN CANCEL ANY BOOKING
+    // ========================================
+
+    if (req.user.role === "admin") {
+      if (booking.status === "Completed") {
+        return res.status(400).json({
+          message: "Completed bookings cannot be cancelled",
+        });
+      }
+
+      booking.status = "Cancelled";
+
+      await booking.save();
+
+      return res.status(200).json({
+        message: "Booking cancelled successfully by admin",
+        booking,
+      });
+    }
+
+    // ========================================
+    // CUSTOMER CAN ONLY CANCEL THEIR OWN BOOKING
+    // ========================================
+
+    if (!booking.user) {
+      return res.status(400).json({
+        message: "This booking is not linked to a user",
+      });
+    }
+
+    if (
+      booking.user.toString() !==
+      req.user.userId.toString()
+    ) {
+      return res.status(403).json({
+        message: "You are not authorized to cancel this booking",
+      });
+    }
+
+    // Customers can only cancel Pending bookings
+    if (booking.status !== "Pending") {
+      return res.status(400).json({
+        message:
+          "Booking cannot be cancelled because its current status is not Pending",
+      });
+    }
+
+    booking.status = "Cancelled";
+
+    await booking.save();
+
+    return res.status(200).json({
+      message: "Booking cancelled successfully",
+      booking,
+    });
+  } catch (error) {
+    console.error("Cancel booking error:", error);
+
+    return res.status(500).json({
+      message: "Failed to cancel booking",
+      error: error.message,
+    });
+  }
 };
 
 
