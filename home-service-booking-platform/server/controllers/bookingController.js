@@ -5,6 +5,7 @@ const Booking = require("../models/Booking");
 // ==========================================
 
 const createBooking = async (req, res) => {
+  console.log("AUTH USER:", req.user);
   try {
     const {
       service,
@@ -16,6 +17,8 @@ const createBooking = async (req, res) => {
       address,
       notes,
     } = req.body;
+    
+    const userId = req.user.userId;
 
     if (
       !service ||
@@ -32,6 +35,7 @@ const createBooking = async (req, res) => {
     }
 
     const booking = await Booking.create({
+      user: req.user.userId,
       service,
       price,
       customerName,
@@ -75,6 +79,29 @@ const getBookings = async (req, res) => {
 
     res.status(500).json({
       message: "Failed to fetch bookings",
+      error: error.message,
+    });
+  }
+};
+
+// ============================================
+// GET MY BOOKINGS
+// ============================================
+
+const getMyBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      user: req.user.userId,
+    }).sort({
+      createdAt: -1,
+    });
+
+    res.status(200).json(bookings);
+  } catch (error) {
+    console.error("Get my bookings error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch your bookings",
       error: error.message,
     });
   }
@@ -130,41 +157,73 @@ const updateBookingStatus = async (req, res) => {
   }
 };
 
+// ========================================
+// CANCEL BOOKING
+// ========================================
 
-// ==========================================
-// DELETE / CANCEL BOOKING
-// ==========================================
+const cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-const deleteBooking = async (req, res) => {
-  try {
-    const { id } = req.params;
+        // Find the booking
+        const booking = await Booking.findById(id);
 
-    const booking = await Booking.findByIdAndDelete(id);
+        if (!booking) {
+            return res.status(404).json({
+                message: "Booking not found"
+            });
+        }
 
-    if (!booking) {
-      return res.status(404).json({
-        message: "Booking not found.",
-      });
+        // Make sure the booking is linked to a user
+        if (!booking.user) {
+            return res.status(400).json({
+                message: "This booking is not linked to a user"
+            });
+        }
+
+        // Only the owner can cancel the booking
+        if (booking.user.toString() !== req.user.userId.toString()) {
+            return res.status(403).json({
+                message: "You are not authorized to cancel this booking"
+            });
+        }
+
+        // Only pending bookings can be cancelled
+        if (booking.status !== "Pending") {
+            return res.status(400).json({
+                message: "Booking cannot be cancelled because its current status is not Pending"
+            });
+        }
+
+        // Change status instead of deleting the booking
+        booking.status = "Cancelled";
+
+        await booking.save();
+
+        return res.status(200).json({
+            message: "Booking cancelled successfully",
+            booking
+        });
+
+    } catch (error) {
+        console.error("Cancel booking error:", error);
+
+        return res.status(500).json({
+            message: "Failed to cancel booking",
+            error: error.message
+        });
     }
-
-    res.status(200).json({
-      message: "Booking cancelled successfully",
-    });
-
-  } catch (error) {
-    console.error("Delete booking error:", error);
-
-    res.status(500).json({
-      message: "Failed to cancel booking",
-      error: error.message,
-    });
-  }
 };
 
 
+// ========================================
+// EXPORT CONTROLLERS
+// ========================================
+
 module.exports = {
-  createBooking,
-  getBookings,
-  updateBookingStatus,
-  deleteBooking,
+    createBooking,
+    getBookings,
+    getMyBookings,
+    updateBookingStatus,
+    cancelBooking
 };
