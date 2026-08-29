@@ -1,12 +1,153 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { useAuth } from "../../context/AuthContext";
+import { sendContactMessage } from "../../services/contactService";
+
 function Contact() {
+  const navigate = useNavigate();
+
+  const { isAuthenticated, user } = useAuth();
+
+  const [formData, setFormData] = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+    subject: "",
+    message: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+
+  // ==========================================
+  // HANDLE INPUT
+  // ==========================================
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    setSuccess("");
+    setError("");
+  };
+
+  // ==========================================
+  // SUBMIT FORM
+  // ==========================================
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    setSuccess("");
+    setError("");
+
+    // ==========================================
+    // LOGIN REQUIRED
+    // ==========================================
+
+    if (!isAuthenticated) {
+      navigate("/login", {
+        state: {
+          from: "/contact",
+          message:
+            "Please login to send a contact message.",
+        },
+      });
+
+      return;
+    }
+
+    // ==========================================
+    // VALIDATION
+    // ==========================================
+
+    if (
+      !formData.name.trim() ||
+      !formData.email.trim() ||
+      !formData.phone.trim() ||
+      !formData.subject.trim() ||
+      !formData.message.trim()
+    ) {
+      setError("Please fill in all fields.");
+      return;
+    }
+
+    // ==========================================
+    // PHONE VALIDATION
+    // ==========================================
+
+    const phone = formData.phone.replace(/\D/g, "");
+
+    if (phone.length !== 10) {
+      setError(
+        "Please enter a valid 10-digit phone number."
+      );
+
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await sendContactMessage({
+        ...formData,
+        phone,
+      });
+
+      setSuccess(
+        "Your message has been sent successfully. Our team will contact you soon."
+      );
+
+      setFormData({
+        name: user?.name || "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+        subject: "",
+        message: "",
+      });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } catch (error) {
+      console.error(
+        "Contact form error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Unable to send your message. Please try again."
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==========================================
+  // PAGE
+  // ==========================================
+
   return (
     <section className="bg-gray-200 py-16 sm:py-20">
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* =========================
+        {/* ======================================
             HEADER
-        ========================= */}
+        ====================================== */}
 
         <div className="text-center mb-14">
 
@@ -16,31 +157,30 @@ function Contact() {
 
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-950">
             We're Here to
-            <span className="text-orange-500"> Help</span>
+            <span className="text-orange-500">
+              {" "}Help
+            </span>
           </h1>
 
           <p className="text-gray-600 mt-5 max-w-2xl mx-auto leading-7">
-            Have a question or need help? Get in touch with our team
+            Have a question or need help?
+            Get in touch with our team
             and we'll be happy to assist you.
           </p>
 
         </div>
 
-
-        {/* =========================
+        {/* ======================================
             MAIN CONTENT
-        ========================= */}
+        ====================================== */}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
 
-
-          {/* =========================
+          {/* ======================================
               CONTACT INFORMATION
-          ========================= */}
+          ====================================== */}
 
           <div className="relative overflow-hidden bg-blue-950 text-white rounded-2xl p-8 sm:p-10 shadow-lg">
-
-            {/* Orange accent */}
 
             <div className="absolute top-0 left-0 w-24 h-1 bg-orange-500 rounded-full"></div>
 
@@ -53,17 +193,13 @@ function Contact() {
             </h2>
 
             <p className="text-blue-100 leading-7 mb-8">
-              Contact TrueFix for service enquiries, booking assistance,
-              or any other questions.
+              Contact TrueFix for service enquiries,
+              booking assistance, or any other questions.
             </p>
-
-
-            {/* Contact Details */}
 
             <div className="space-y-6">
 
-
-              {/* Address */}
+              {/* ADDRESS */}
 
               <div className="flex gap-4 items-start">
 
@@ -83,8 +219,7 @@ function Contact() {
 
               </div>
 
-
-              {/* Phone */}
+              {/* PHONE */}
 
               <div className="flex gap-4 items-start">
 
@@ -108,8 +243,7 @@ function Contact() {
 
               </div>
 
-
-              {/* Email */}
+              {/* EMAIL */}
 
               <div className="flex gap-4 items-start">
 
@@ -129,8 +263,7 @@ function Contact() {
 
               </div>
 
-
-              {/* Working Hours */}
+              {/* HOURS */}
 
               <div className="flex gap-4 items-start">
 
@@ -148,7 +281,7 @@ function Contact() {
                   </p>
 
                   <p className="text-blue-100">
-                    8:00 AM - 8:00 PM
+                    8:00 AM - 9:00 PM
                   </p>
                 </div>
 
@@ -158,12 +291,11 @@ function Contact() {
 
           </div>
 
-
-          {/* =========================
+          {/* ======================================
               CONTACT FORM
-          ========================= */}
+          ====================================== */}
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-7 sm:p-9 hover:shadow-lg transition-all duration-300">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-7 sm:p-9">
 
             <p className="text-orange-500 font-semibold text-sm uppercase tracking-wide mb-2">
               Send a Message
@@ -173,10 +305,79 @@ function Contact() {
               How Can We Help?
             </h2>
 
-            <form className="space-y-5">
+            {/* LOGIN NOTICE */}
 
+            {!isAuthenticated && (
+              <div className="mb-5 bg-orange-50 border border-orange-200 text-orange-700 rounded-xl p-4">
 
-              {/* Name */}
+                <div className="flex items-start gap-3">
+
+                  <span className="text-lg">
+                    🔐
+                  </span>
+
+                  <div>
+                    <p className="font-semibold">
+                      Login required
+                    </p>
+
+                    <p className="text-sm mt-1">
+                      Please login before sending a
+                      message to TrueFix.
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* SUCCESS */}
+
+            {success && (
+              <div className="mb-5 bg-green-50 border border-green-200 text-green-700 rounded-xl p-4">
+
+                <div className="flex items-start gap-3">
+
+                  <span className="text-lg">
+                    ✓
+                  </span>
+
+                  <p className="font-medium">
+                    {success}
+                  </p>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* ERROR */}
+
+            {error && (
+              <div className="mb-5 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
+
+                <div className="flex items-start gap-3">
+
+                  <span className="text-lg">
+                    !
+                  </span>
+
+                  <p className="font-medium">
+                    {error}
+                  </p>
+
+                </div>
+
+              </div>
+            )}
+
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-5"
+            >
+
+              {/* NAME */}
 
               <div>
 
@@ -186,14 +387,16 @@ function Contact() {
 
                 <input
                   type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
                   placeholder="Enter your name"
-                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
                 />
 
               </div>
 
-
-              {/* Email */}
+              {/* EMAIL */}
 
               <div>
 
@@ -203,14 +406,16 @@ function Contact() {
 
                 <input
                   type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   placeholder="Enter your email"
-                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
                 />
 
               </div>
 
-
-              {/* Phone */}
+              {/* PHONE */}
 
               <div>
 
@@ -220,14 +425,18 @@ function Contact() {
 
                 <input
                   type="tel"
-                  placeholder="Enter your phone number"
-                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  maxLength={10}
+                  inputMode="numeric"
+                  placeholder="Enter your 10-digit phone number"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
                 />
 
               </div>
 
-
-              {/* Subject */}
+              {/* SUBJECT */}
 
               <div>
 
@@ -237,14 +446,16 @@ function Contact() {
 
                 <input
                   type="text"
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
                   placeholder="What can we help you with?"
-                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
                 />
 
               </div>
 
-
-              {/* Message */}
+              {/* MESSAGE */}
 
               <div>
 
@@ -253,21 +464,42 @@ function Contact() {
                 </label>
 
                 <textarea
+                  name="message"
                   rows="5"
+                  value={formData.message}
+                  onChange={handleChange}
                   placeholder="Write your message..."
-                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none resize-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
-                ></textarea>
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 outline-none resize-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
+                />
 
               </div>
 
-
-              {/* Button */}
+              {/* BUTTON */}
 
               <button
                 type="submit"
-                className="w-full bg-orange-500 text-white py-3.5 rounded-xl font-semibold shadow-sm hover:bg-orange-600 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                disabled={loading}
+                className="
+                  w-full
+                  bg-orange-500
+                  text-white
+                  py-3.5
+                  rounded-xl
+                  font-semibold
+                  shadow-sm
+                  hover:bg-orange-600
+                  hover:shadow-lg
+                  transition-all
+                  duration-200
+                  disabled:bg-gray-400
+                  disabled:cursor-not-allowed
+                "
               >
-                Send Message
+                {loading
+                  ? "Sending..."
+                  : isAuthenticated
+                    ? "Send Message"
+                    : "Login to Send Message"}
               </button>
 
             </form>

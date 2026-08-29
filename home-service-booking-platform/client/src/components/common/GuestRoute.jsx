@@ -1,19 +1,12 @@
-import {
-  Navigate,
-  Outlet,
-  useLocation,
-} from "react-router-dom";
-
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-function ProtectedRoute({ allowedRoles = [] }) {
+function GuestRoute() {
   const {
     user,
     isAuthenticated,
     loadingUser,
   } = useAuth();
-
-  const location = useLocation();
 
   // ==========================================
   // WAIT FOR AUTH CHECK
@@ -34,30 +27,11 @@ function ProtectedRoute({ allowedRoles = [] }) {
   }
 
   // ==========================================
-  // NOT AUTHENTICATED
+  // ALREADY AUTHENTICATED
   // ==========================================
 
-  if (!isAuthenticated || !user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{
-          from: location.pathname,
-        }}
-      />
-    );
-  }
-
-  // ==========================================
-  // ROLE CHECK
-  // ==========================================
-
-  if (
-    allowedRoles.length > 0 &&
-    !allowedRoles.includes(user.role)
-  ) {
-    // Admin attempting customer-only page
+  if (isAuthenticated && user) {
+    // Admin trying to access Login/Register
     if (user.role === "admin") {
       return (
         <Navigate
@@ -67,20 +41,22 @@ function ProtectedRoute({ allowedRoles = [] }) {
       );
     }
 
-    // Customer attempting admin-only page
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    );
+    // Customer trying to access Login/Register
+    if (user.role === "customer") {
+      return (
+        <Navigate
+          to="/"
+          replace
+        />
+      );
+    }
   }
 
   // ==========================================
-  // AUTHORIZED
+  // NOT LOGGED IN
   // ==========================================
 
   return <Outlet />;
 }
 
-export default ProtectedRoute;
+export default GuestRoute;

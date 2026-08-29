@@ -1,13 +1,9 @@
 import { apiRequest } from "./api";
 
-// Get logged-in user's bookings
-export const getMyBookings = async () => {
-  return await apiRequest("/bookings/my", {
-    method: "GET",
-  });
-};
+// ==========================================
+// CREATE BOOKING
+// ==========================================
 
-// Create a new booking
 export const createBooking = async (bookingData) => {
   return await apiRequest("/bookings", {
     method: "POST",
@@ -15,18 +11,45 @@ export const createBooking = async (bookingData) => {
   });
 };
 
-// Cancel a booking
+// ==========================================
+// GET MY BOOKINGS
+// ==========================================
+
+export const getMyBookings = async () => {
+  return await apiRequest("/bookings/my");
+};
+
+// ==========================================
+// CANCEL BOOKING
+// ==========================================
+
 export const cancelBooking = async (bookingId) => {
   return await apiRequest(`/bookings/${bookingId}/cancel`, {
     method: "PATCH",
   });
 };
 
-// Admin: update booking status
-export const updateBookingStatus = async (
-  bookingId,
-  status
-) => {
+// ==========================================
+// GET SINGLE BOOKING
+// ==========================================
+
+export const getBookingById = async (bookingId) => {
+  return await apiRequest(`/bookings/${bookingId}`);
+};
+
+// ==========================================
+// GET ALL BOOKINGS - ADMIN
+// ==========================================
+
+export const getAllBookings = async () => {
+  return await apiRequest("/bookings");
+};
+
+// ==========================================
+// UPDATE BOOKING STATUS - ADMIN
+// ==========================================
+
+export const updateBookingStatus = async (bookingId, status) => {
   return await apiRequest(`/bookings/${bookingId}/status`, {
     method: "PUT",
     body: JSON.stringify({ status }),

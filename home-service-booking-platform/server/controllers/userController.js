@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const bcrypt = require("bcryptjs");
 
 // ==========================================
 // GET CURRENT USER PROFILE
@@ -15,19 +16,18 @@ const getMyProfile = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       user,
     });
   } catch (error) {
     console.error("Get my profile error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to fetch profile",
       error: error.message,
     });
   }
 };
-
 
 // ==========================================
 // UPDATE CURRENT USER PROFILE
@@ -41,28 +41,57 @@ const updateMyProfile = async (req, res) => {
       address,
     } = req.body;
 
-    // Validate name
+    // ==========================================
+    // NAME VALIDATION
+    // ==========================================
+
     if (!name || !name.trim()) {
       return res.status(400).json({
-        message: "Name is required",
+        message: "Full name is required.",
       });
     }
 
-    // Find currently logged-in user
-    const user = await User.findById(req.user.userId);
+    // ==========================================
+    // PHONE VALIDATION
+    // ==========================================
+
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({
+        message: "Phone number is required.",
+      });
+    }
+
+    const cleanedPhone = phone
+      .trim()
+      .replace(/\s+/g, "");
+
+    if (!/^[0-9]{10}$/.test(cleanedPhone)) {
+      return res.status(400).json({
+        message:
+          "Phone number must contain exactly 10 digits.",
+      });
+    }
+
+    // ==========================================
+    // FIND USER
+    // ==========================================
+
+    const user = await User.findById(
+      req.user.userId
+    );
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message: "User not found.",
       });
     }
 
-    // Update fields
-    user.name = name.trim();
+    // ==========================================
+    // UPDATE USER
+    // ==========================================
 
-    if (phone !== undefined) {
-      user.phone = phone.trim();
-    }
+    user.name = name.trim();
+    user.phone = cleanedPhone;
 
     if (address !== undefined) {
       user.address = address.trim();
@@ -70,59 +99,256 @@ const updateMyProfile = async (req, res) => {
 
     await user.save();
 
-    // Return updated user without password
-    const updatedUser = await User.findById(user._id)
-      .select("-password");
+    // ==========================================
+    // RETURN UPDATED USER
+    // ==========================================
 
-    res.status(200).json({
-      message: "Profile updated successfully",
+    const updatedUser = await User.findById(
+      user._id
+    ).select("-password");
+
+    return res.status(200).json({
+      message: "Profile updated successfully.",
       user: updatedUser,
     });
-
   } catch (error) {
     console.error(
       "Update my profile error:",
       error
     );
 
-    res.status(500).json({
-      message: "Failed to update profile",
+    return res.status(500).json({
+      message: "Failed to update profile.",
       error: error.message,
     });
   }
 };
 
+// ==========================================
+// CHANGE PASSWORD
+// ==========================================
+
+const changePassword = async (req, res) => {
+  try {
+    const {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    } = req.body;
+
+    // ==========================================
+    // REQUIRED FIELDS
+    // ==========================================
+
+    if (
+      !currentPassword ||
+      !newPassword ||
+      !confirmPassword
+    ) {
+      return res.status(400).json({
+        message:
+          "Current password, new password and confirmation are required.",
+      });
+    }
+
+    // ==========================================
+    // NEW PASSWORD VALIDATION
+    // ==========================================
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message:
+          "New password must be at least 6 characters long.",
+      });
+    }
+
+    // ==========================================
+    // CONFIRM PASSWORD
+    // ==========================================
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        message:
+          "New password and confirm password do not match.",
+      });
+    }
+
+    // ==========================================
+    // FIND USER
+    // ==========================================
+
+    const user = await User.findById(
+      req.user.userId
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    // ==========================================
+    // CHECK CURRENT PASSWORD
+    // ==========================================
+
+    const passwordMatches =
+      await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+
+    if (!passwordMatches) {
+      return res.status(400).json({
+        message: "Current password is incorrect.",
+      });
+    }
+
+    // ==========================================
+    // PREVENT SAME PASSWORD
+    // ==========================================
+
+    const samePassword =
+      await bcrypt.compare(
+        newPassword,
+        user.password
+      );
+
+    if (samePassword) {
+      return res.status(400).json({
+        message:
+          "New password must be different from your current password.",
+      });
+    }
+
+    // ==========================================
+    // HASH NEW PASSWORD
+    // ==========================================
+
+    const hashedPassword =
+      await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+
+    await user.save();
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
+
+    return res.status(200).json({
+      message:
+        "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error(
+      "Change password error:",
+      error
+    );
+
+    return res.status(500).json({
+      message: "Failed to change password.",
+      error: error.message,
+    });
+  }
+};
 
 // ==========================================
-// GET ALL USERS - ADMIN
+// DELETE CURRENT USER ACCOUNT
+// ==========================================
+
+const deleteMyAccount = async (req, res) => {
+  try {
+    // ==========================================
+    // GET USER ONLY FROM JWT
+    // ==========================================
+
+    const userId = req.user.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Authentication required.",
+      });
+    }
+
+    // ==========================================
+    // FIND CURRENT USER
+    // ==========================================
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User account not found.",
+      });
+    }
+
+    // ==========================================
+    // SAFETY CHECK
+    // ==========================================
+
+    // Do not allow an admin to use the
+    // customer self-delete endpoint.
+    if (user.role === "admin") {
+      return res.status(403).json({
+        message:
+          "Admin accounts cannot be deleted from this endpoint.",
+      });
+    }
+
+    // ==========================================
+    // DELETE CURRENT USER
+    // ==========================================
+
+    await User.findByIdAndDelete(userId);
+
+    return res.status(200).json({
+      message:
+        "Your account has been permanently deleted.",
+    });
+  } catch (error) {
+    console.error(
+      "Delete my account error:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to delete your account. Please try again.",
+      error: error.message,
+    });
+  }
+};
+
+// ==========================================
+// ADMIN - GET ALL USERS
 // ==========================================
 
 const getUsers = async (req, res) => {
   try {
     const users = await User.find()
       .select("-password")
-      .sort({ createdAt: -1 });
+      .sort({
+        createdAt: -1,
+      });
 
-    res.status(200).json({
+    return res.status(200).json({
       users,
     });
-
   } catch (error) {
     console.error(
       "Get users error:",
       error
     );
 
-    res.status(500).json({
-      message: "Failed to fetch users",
+    return res.status(500).json({
+      message: "Failed to fetch users.",
       error: error.message,
     });
   }
 };
 
-
 // ==========================================
-// DELETE USER - ADMIN
+// ADMIN - DELETE USER
 // ==========================================
 
 const deleteUser = async (req, res) => {
@@ -133,36 +359,37 @@ const deleteUser = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message: "User not found.",
       });
     }
 
-    // Never allow deleting admin
+    // ==========================================
+    // NEVER DELETE ADMIN
+    // ==========================================
+
     if (user.role === "admin") {
       return res.status(403).json({
-        message: "Admin users cannot be deleted",
+        message: "Admin users cannot be deleted.",
       });
     }
 
     await User.findByIdAndDelete(id);
 
-    res.status(200).json({
-      message: "User deleted successfully",
+    return res.status(200).json({
+      message: "User deleted successfully.",
     });
-
   } catch (error) {
     console.error(
       "Delete user error:",
       error
     );
 
-    res.status(500).json({
-      message: "Failed to delete user",
+    return res.status(500).json({
+      message: "Failed to delete user.",
       error: error.message,
     });
   }
 };
-
 
 // ==========================================
 // EXPORT
@@ -171,6 +398,8 @@ const deleteUser = async (req, res) => {
 module.exports = {
   getMyProfile,
   updateMyProfile,
+  changePassword,
+  deleteMyAccount,
   getUsers,
   deleteUser,
 };

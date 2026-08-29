@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-const API_URL = "http://localhost:5001/api";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 function BookService() {
   const location = useLocation();
@@ -26,36 +27,35 @@ function BookService() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  // --------------------------------
-  // UPDATE CUSTOMER NAME
-  // --------------------------------
+  // ==========================================
+  // UPDATE USER NAME
+  // ==========================================
 
   useEffect(() => {
     if (user?.name) {
-      setFormData((prev) => ({
-        ...prev,
+      setFormData((previous) => ({
+        ...previous,
         customerName: user.name,
       }));
     }
   }, [user]);
 
-  // --------------------------------
-  // SCROLL TO TOP AFTER CONFIRMATION
-  // --------------------------------
+  // ==========================================
+  // SCROLL TO TOP AFTER BOOKING CONFIRMATION
+  // ==========================================
 
   useEffect(() => {
     if (bookingConfirmed) {
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "instant",
+      // Immediately move the confirmation page to the top
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
       });
     }
   }, [bookingConfirmed]);
 
-  // --------------------------------
+  // ==========================================
   // SERVICE NOT FOUND
-  // --------------------------------
+  // ==========================================
 
   if (!service) {
     return (
@@ -70,8 +70,19 @@ function BookService() {
           </p>
 
           <button
+            type="button"
             onClick={() => navigate("/services")}
-            className="bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
+            className="
+              bg-orange-500
+              text-white
+              px-6
+              py-3
+              rounded-xl
+              font-semibold
+              hover:bg-orange-600
+              transition
+              cursor-pointer
+            "
           >
             Browse Services
           </button>
@@ -80,9 +91,9 @@ function BookService() {
     );
   }
 
-  // --------------------------------
+  // ==========================================
   // LOGIN REQUIRED
-  // --------------------------------
+  // ==========================================
 
   if (!isAuthenticated) {
     return (
@@ -97,8 +108,19 @@ function BookService() {
           </p>
 
           <button
+            type="button"
             onClick={() => navigate("/login")}
-            className="bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
+            className="
+              bg-orange-500
+              text-white
+              px-6
+              py-3
+              rounded-xl
+              font-semibold
+              hover:bg-orange-600
+              transition
+              cursor-pointer
+            "
           >
             Go to Login
           </button>
@@ -107,41 +129,43 @@ function BookService() {
     );
   }
 
-  // --------------------------------
+  // ==========================================
   // HANDLE INPUT
-  // --------------------------------
+  // ==========================================
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       [name]: value,
     }));
 
-    setErrors((prev) => ({
-      ...prev,
+    setErrors((previous) => ({
+      ...previous,
       [name]: "",
     }));
 
     setApiError("");
   };
 
-  // --------------------------------
+  // ==========================================
   // VALIDATION
-  // --------------------------------
+  // ==========================================
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.customerName.trim()) {
-      newErrors.customerName = "Booking person name is required";
+      newErrors.customerName =
+        "Booking person name is required";
     }
 
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone number is required";
     } else if (!/^[0-9]{10}$/.test(formData.phone)) {
-      newErrors.phone = "Enter a valid 10-digit phone number";
+      newErrors.phone =
+        "Enter a valid 10-digit phone number";
     }
 
     if (!formData.address.trim()) {
@@ -159,12 +183,12 @@ function BookService() {
     return newErrors;
   };
 
-  // --------------------------------
-  // CONFIRM BOOKING
-  // --------------------------------
+  // ==========================================
+  // SUBMIT BOOKING
+  // ==========================================
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     const validationErrors = validateForm();
 
@@ -173,13 +197,25 @@ function BookService() {
       return;
     }
 
-    setLoading(true);
-    setApiError("");
-
     try {
-      // -----------------------------
+      setLoading(true);
+      setApiError("");
+
+      // ----------------------------------------
+      // GET JWT TOKEN
+      // ----------------------------------------
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error(
+          "Authentication token not found. Please login again."
+        );
+      }
+
+      // ----------------------------------------
       // BOOKING DATA
-      // -----------------------------
+      // ----------------------------------------
 
       const bookingData = {
         service: service.name,
@@ -194,23 +230,9 @@ function BookService() {
 
       console.log("Sending booking:", bookingData);
 
-      // -----------------------------
-      // GET JWT TOKEN
-      // -----------------------------
-
-      const token = localStorage.getItem("token");
-
-      console.log("Token exists:", Boolean(token));
-
-      if (!token) {
-        throw new Error(
-          "Authentication token not found. Please login again."
-        );
-      }
-
-      // -----------------------------
-      // SEND BOOKING TO BACKEND
-      // -----------------------------
+      // ----------------------------------------
+      // CREATE BOOKING
+      // ----------------------------------------
 
       const response = await fetch(`${API_URL}/bookings`, {
         method: "POST",
@@ -223,13 +245,9 @@ function BookService() {
         body: JSON.stringify(bookingData),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       console.log("Booking API response:", data);
-
-      // -----------------------------
-      // HANDLE API ERROR
-      // -----------------------------
 
       if (!response.ok) {
         throw new Error(
@@ -237,16 +255,22 @@ function BookService() {
         );
       }
 
-      // -----------------------------
-      // SUCCESS
-      // -----------------------------
+      // ----------------------------------------
+      // SHOW CONFIRMATION
+      // ----------------------------------------
 
       setBookingConfirmed(true);
 
-      setTimeout(() => {
+      // ----------------------------------------
+      // REDIRECT TO MY BOOKINGS
+      // ----------------------------------------
+
+      const redirectTimer = setTimeout(() => {
         navigate("/my-bookings");
       }, 2000);
 
+      // Cleanup timer if component unmounts
+      return () => clearTimeout(redirectTimer);
     } catch (error) {
       console.error("Booking error:", error);
 
@@ -259,33 +283,90 @@ function BookService() {
     }
   };
 
-  // --------------------------------
-  // SUCCESS SCREEN
-  // --------------------------------
+  // ==========================================
+  // BOOKING CONFIRMED SCREEN
+  // ==========================================
 
   if (bookingConfirmed) {
     return (
-      <section className="min-h-screen bg-gray-100 py-12 px-4 flex items-start justify-center">
+      <section
+        className="
+          min-h-screen
+          bg-gray-100
+          py-12
+          px-4
+          flex
+          items-start
+          justify-center
+        "
+      >
         <div className="w-full max-w-lg">
-          <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-12 text-center">
+          <div
+            className="
+              bg-white
+              rounded-3xl
+              shadow-xl
+              p-8
+              sm:p-12
+              text-center
+            "
+          >
+            {/* SUCCESS ICON */}
 
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
+            <div
+              className="
+                w-24
+                h-24
+                mx-auto
+                mb-6
+                rounded-full
+                bg-green-100
+                flex
+                items-center
+                justify-center
+              "
+            >
+              <div
+                className="
+                  w-16
+                  h-16
+                  rounded-full
+                  bg-green-500
+                  flex
+                  items-center
+                  justify-center
+                "
+              >
                 <span className="text-white text-4xl font-bold">
                   ✓
                 </span>
               </div>
             </div>
 
+            {/* TITLE */}
+
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-900">
               Booking Confirmed!
             </h1>
+
+            {/* MESSAGE */}
 
             <p className="text-gray-600 mt-4 text-lg">
               Your service booking has been successfully created.
             </p>
 
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mt-6">
+            {/* SERVICE */}
+
+            <div
+              className="
+                bg-orange-50
+                border
+                border-orange-100
+                rounded-xl
+                p-4
+                mt-6
+              "
+            >
               <p className="text-sm text-gray-500">
                 Service
               </p>
@@ -295,39 +376,44 @@ function BookService() {
               </p>
             </div>
 
-            <div className="mt-4">
-              <p className="text-sm text-gray-500">
-                Booking Person
-              </p>
-
-              <p className="font-semibold text-gray-800 mt-1">
-                {formData.customerName}
-              </p>
-            </div>
+            {/* REDIRECT MESSAGE */}
 
             <p className="text-gray-500 text-sm mt-8">
               Redirecting you to My Bookings...
             </p>
 
-            <div className="mt-4 flex justify-center">
-              <div className="w-8 h-8 border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin"></div>
-            </div>
+            {/* LOADER */}
 
+            <div className="mt-4 flex justify-center">
+              <div
+                className="
+                  w-8
+                  h-8
+                  border-4
+                  border-gray-200
+                  border-t-orange-500
+                  rounded-full
+                  animate-spin
+                "
+              />
+            </div>
           </div>
         </div>
       </section>
     );
   }
 
-  // --------------------------------
+  // ==========================================
   // BOOKING FORM
-  // --------------------------------
+  // ==========================================
 
   return (
     <section className="min-h-screen bg-gray-100 py-12 px-4">
       <div className="max-w-3xl mx-auto">
 
-        {/* PAGE HEADER */}
+        {/* =====================================
+            HEADER
+        ===================================== */}
 
         <div className="text-center mb-8">
           <p className="text-orange-500 font-semibold">
@@ -343,26 +429,80 @@ function BookService() {
           </p>
         </div>
 
-        {/* API ERROR */}
+        {/* =====================================
+            API ERROR
+        ===================================== */}
 
         {apiError && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
+          <div
+            className="
+              mb-6
+              bg-red-50
+              border
+              border-red-200
+              text-red-700
+              rounded-xl
+              p-4
+            "
+          >
             {apiError}
           </div>
         )}
 
-        {/* SERVICE SUMMARY */}
+        {/* =====================================
+            SERVICE SUMMARY
+        ===================================== */}
 
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+        <div
+          className="
+            bg-white
+            rounded-2xl
+            shadow-md
+            overflow-hidden
+            mb-6
+          "
+        >
+          {/* SERVICE IMAGE */}
 
-          <img
-            src={service.image}
-            alt={service.name}
-            className="w-full h-52 object-cover"
-          />
+          {service.image ? (
+            <img
+              src={service.image}
+              alt={service.name}
+              className="
+                w-full
+                h-[400px]
+                object-cover
+              "
+            />
+          ) : (
+            <div
+              className="
+                w-full
+                h-52
+                bg-gray-100
+                flex
+                items-center
+                justify-center
+                text-6xl
+              "
+            >
+              🛠️
+            </div>
+          )}
 
-          <div className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* SERVICE INFORMATION */}
 
+          <div
+            className="
+              p-5
+              flex
+              flex-col
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+              gap-3
+            "
+          >
             <div>
               <h2 className="text-xl font-bold text-blue-900">
                 {service.name}
@@ -376,23 +516,41 @@ function BookService() {
             <p className="text-orange-500 text-xl font-bold">
               ₹{service.price}
             </p>
-
           </div>
         </div>
 
-        {/* FORM */}
+        {/* =====================================
+            FORM CONTAINER
+        ===================================== */}
 
-        <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-
+        <div
+          className="
+            bg-white
+            rounded-2xl
+            shadow-md
+            p-6
+            sm:p-8
+          "
+        >
           <form
             onSubmit={handleSubmit}
             className="space-y-5"
           >
 
-            {/* NAME */}
+            {/* =================================
+                CUSTOMER NAME
+            ================================= */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label
+                className="
+                  block
+                  text-sm
+                  font-semibold
+                  text-gray-700
+                  mb-2
+                "
+              >
                 Booking Person Name
               </label>
 
@@ -402,11 +560,19 @@ function BookService() {
                 value={formData.customerName}
                 onChange={handleChange}
                 placeholder="Enter booking person's name"
-                className={`w-full px-4 py-3 border rounded-xl outline-none ${
-                  errors.customerName
-                    ? "border-red-500"
-                    : "border-gray-300 focus:border-orange-500"
-                }`}
+                className={`
+                  w-full
+                  px-4
+                  py-3
+                  border
+                  rounded-xl
+                  outline-none
+                  ${
+                    errors.customerName
+                      ? "border-red-500"
+                      : "border-gray-300 focus:border-orange-500"
+                  }
+                `}
               />
 
               {errors.customerName && (
@@ -416,10 +582,20 @@ function BookService() {
               )}
             </div>
 
-            {/* PHONE */}
+            {/* =================================
+                PHONE
+            ================================= */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label
+                className="
+                  block
+                  text-sm
+                  font-semibold
+                  text-gray-700
+                  mb-2
+                "
+              >
                 Phone Number
               </label>
 
@@ -430,11 +606,19 @@ function BookService() {
                 onChange={handleChange}
                 placeholder="Enter 10-digit phone number"
                 maxLength="10"
-                className={`w-full px-4 py-3 border rounded-xl outline-none ${
-                  errors.phone
-                    ? "border-red-500"
-                    : "border-gray-300 focus:border-orange-500"
-                }`}
+                className={`
+                  w-full
+                  px-4
+                  py-3
+                  border
+                  rounded-xl
+                  outline-none
+                  ${
+                    errors.phone
+                      ? "border-red-500"
+                      : "border-gray-300 focus:border-orange-500"
+                  }
+                `}
               />
 
               {errors.phone && (
@@ -444,10 +628,20 @@ function BookService() {
               )}
             </div>
 
-            {/* ADDRESS */}
+            {/* =================================
+                ADDRESS
+            ================================= */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label
+                className="
+                  block
+                  text-sm
+                  font-semibold
+                  text-gray-700
+                  mb-2
+                "
+              >
                 Service Address
               </label>
 
@@ -457,11 +651,20 @@ function BookService() {
                 value={formData.address}
                 onChange={handleChange}
                 placeholder="Enter complete service address"
-                className={`w-full px-4 py-3 border rounded-xl outline-none resize-none ${
-                  errors.address
-                    ? "border-red-500"
-                    : "border-gray-300 focus:border-orange-500"
-                }`}
+                className={`
+                  w-full
+                  px-4
+                  py-3
+                  border
+                  rounded-xl
+                  outline-none
+                  resize-none
+                  ${
+                    errors.address
+                      ? "border-red-500"
+                      : "border-gray-300 focus:border-orange-500"
+                  }
+                `}
               />
 
               {errors.address && (
@@ -471,14 +674,30 @@ function BookService() {
               )}
             </div>
 
-            {/* DATE + TIME */}
+            {/* =================================
+                DATE + TIME
+            ================================= */}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-
+            <div
+              className="
+                grid
+                grid-cols-1
+                sm:grid-cols-2
+                gap-5
+              "
+            >
               {/* DATE */}
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  className="
+                    block
+                    text-sm
+                    font-semibold
+                    text-gray-700
+                    mb-2
+                  "
+                >
                   Appointment Date
                 </label>
 
@@ -487,12 +706,24 @@ function BookService() {
                   name="date"
                   value={formData.date}
                   onChange={handleChange}
-                  min={new Date().toISOString().split("T")[0]}
-                  className={`w-full px-4 py-3 border rounded-xl outline-none ${
-                    errors.date
-                      ? "border-red-500"
-                      : "border-gray-300 focus:border-orange-500"
-                  }`}
+                  min={
+                    new Date()
+                      .toISOString()
+                      .split("T")[0]
+                  }
+                  className={`
+                    w-full
+                    px-4
+                    py-3
+                    border
+                    rounded-xl
+                    outline-none
+                    ${
+                      errors.date
+                        ? "border-red-500"
+                        : "border-gray-300 focus:border-orange-500"
+                    }
+                  `}
                 />
 
                 {errors.date && (
@@ -505,7 +736,15 @@ function BookService() {
               {/* TIME */}
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  className="
+                    block
+                    text-sm
+                    font-semibold
+                    text-gray-700
+                    mb-2
+                  "
+                >
                   Appointment Time
                 </label>
 
@@ -513,38 +752,74 @@ function BookService() {
                   name="time"
                   value={formData.time}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-xl outline-none ${
-                    errors.time
-                      ? "border-red-500"
-                      : "border-gray-300 focus:border-orange-500"
-                  }`}
+                  className={`
+                    w-full
+                    px-4
+                    py-3
+                    border
+                    rounded-xl
+                    outline-none
+                    ${
+                      errors.time
+                        ? "border-red-500"
+                        : "border-gray-300 focus:border-orange-500"
+                    }
+                  `}
                 >
                   <option value="">
                     Select time
+                  </option>
+
+                  <option value="08:00 AM">
+                    08:00 AM
                   </option>
 
                   <option value="09:00 AM">
                     09:00 AM
                   </option>
 
+                  <option value="10:00 AM">
+                    10:00 AM
+                  </option>
+
                   <option value="11:00 AM">
                     11:00 AM
+                  </option>
+
+                  <option value="12:00 PM">
+                    12:00 PM
                   </option>
 
                   <option value="01:00 PM">
                     01:00 PM
                   </option>
 
+                  <option value="02:00 PM">
+                    02:00 PM
+                  </option>
+
                   <option value="03:00 PM">
                     03:00 PM
+                  </option>
+
+                  <option value="04:00 PM">
+                    04:00 PM
                   </option>
 
                   <option value="05:00 PM">
                     05:00 PM
                   </option>
 
+                  <option value="06:00 PM">
+                    06:00 PM
+                  </option>
+
                   <option value="07:00 PM">
                     07:00 PM
+                  </option>
+
+                  <option value="08:00 PM">
+                    08:00 PM
                   </option>
                 </select>
 
@@ -554,16 +829,27 @@ function BookService() {
                   </p>
                 )}
               </div>
-
             </div>
 
-            {/* INSTRUCTIONS */}
+            {/* =================================
+                ADDITIONAL INSTRUCTIONS
+            ================================= */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label
+                className="
+                  block
+                  text-sm
+                  font-semibold
+                  text-gray-700
+                  mb-2
+                "
+              >
                 Additional Instructions
+
                 <span className="text-gray-400 font-normal">
-                  {" "} (Optional)
+                  {" "}
+                  (Optional)
                 </span>
               </label>
 
@@ -573,14 +859,33 @@ function BookService() {
                 value={formData.instructions}
                 onChange={handleChange}
                 placeholder="Any specific instructions for the professional?"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none resize-none focus:border-orange-500"
+                className="
+                  w-full
+                  px-4
+                  py-3
+                  border
+                  border-gray-300
+                  rounded-xl
+                  outline-none
+                  resize-none
+                  focus:border-orange-500
+                "
               />
             </div>
 
-            {/* PRICE */}
+            {/* =================================
+                PRICE
+            ================================= */}
 
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-5">
-
+            <div
+              className="
+                bg-orange-50
+                border
+                border-orange-100
+                rounded-xl
+                p-5
+              "
+            >
               <div className="flex justify-between">
                 <span className="text-gray-600">
                   Service Price
@@ -591,7 +896,13 @@ function BookService() {
                 </span>
               </div>
 
-              <div className="border-t border-orange-200 my-3"></div>
+              <div
+                className="
+                  border-t
+                  border-orange-200
+                  my-3
+                "
+              />
 
               <div className="flex justify-between">
                 <span className="font-semibold text-gray-700">
@@ -602,19 +913,29 @@ function BookService() {
                   ₹{service.price}
                 </span>
               </div>
-
             </div>
 
-            {/* BUTTON */}
+            {/* =================================
+                CONFIRM BUTTON
+            ================================= */}
 
             <button
               type="submit"
               disabled={loading}
-              className={`w-full text-white py-3.5 rounded-xl font-semibold shadow-md transition ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-orange-500 hover:bg-orange-600"
-              }`}
+              className={`
+                w-full
+                text-white
+                py-3.5
+                rounded-xl
+                font-semibold
+                shadow-md
+                transition
+                ${
+                  loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-orange-500 hover:bg-orange-600 cursor-pointer"
+                }
+              `}
             >
               {loading
                 ? "Creating Booking..."
@@ -623,7 +944,6 @@ function BookService() {
 
           </form>
         </div>
-
       </div>
     </section>
   );

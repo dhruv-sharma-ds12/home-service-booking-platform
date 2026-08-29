@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
 } from "react";
 
@@ -11,18 +12,116 @@ import {
   getCurrentUser,
 } from "../services/authService";
 
-const AuthContext = createContext();
+import { getMyProfile } from "../services/userService";
+
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-
   // ==========================================
-  // LOAD USER FROM LOCAL STORAGE
+  // INITIAL USER
   // ==========================================
 
   const [user, setUser] = useState(() => {
     return getCurrentUser();
   });
 
+  // Initial authentication/profile check
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  // Login/logout authentication operations
+  const [loadingAuth, setLoadingAuth] = useState(false);
+
+  // ==========================================
+  // LOAD CURRENT USER
+  // ==========================================
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCurrentProfile = async () => {
+      const token = localStorage.getItem("token");
+
+      // No token = definitely logged out
+      if (!token) {
+        if (mounted) {
+          setUser(null);
+          setLoadingUser(false);
+        }
+
+        return;
+      }
+
+      try {
+        const data = await getMyProfile();
+
+        if (!mounted) {
+          return;
+        }
+
+        if (data?.user) {
+          setUser(data.user);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(data.user)
+          );
+        } else {
+          // Token exists but backend returned no user
+          logoutUser();
+          setUser(null);
+        }
+      } catch (error) {
+        console.error(
+          "Load current profile error:",
+          error
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        /*
+         * Only invalidate the session when the
+         * error clearly indicates an authentication
+         * problem.
+         */
+
+        const message =
+          error?.message?.toLowerCase() || "";
+
+        const authenticationError =
+          message.includes("authentication") ||
+          message.includes("invalid") ||
+          message.includes("expired") ||
+          message.includes("unauthorized");
+
+        if (authenticationError) {
+          logoutUser();
+          setUser(null);
+        } else {
+          /*
+           * Backend/network problem:
+           * keep the locally stored user.
+           */
+          const storedUser = getCurrentUser();
+
+          if (storedUser) {
+            setUser(storedUser);
+          }
+        }
+      } finally {
+        if (mounted) {
+          setLoadingUser(false);
+        }
+      }
+    };
+
+    loadCurrentProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // ==========================================
   // REGISTER
@@ -30,81 +129,98 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     try {
-
       const data = await registerUser(userData);
 
       return {
         success: true,
-        user: data.user,
-        message: data.message,
+        user: data?.user || null,
+        message:
+          data?.message ||
+          "User registered successfully.",
       };
-
     } catch (error) {
+      console.error(
+        "Registration error:",
+        error
+      );
 
       return {
         success: false,
+        user: null,
         message:
-          error.message ||
+          error?.message ||
           "Registration failed.",
       };
-
     }
   };
-
 
   // ==========================================
   // LOGIN
   // ==========================================
 
   const login = async (email, password) => {
+    setLoadingAuth(true);
 
     try {
-
       const data = await loginUser({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
-      // authService already saves these,
-      // but we also update React state.
+      if (!data?.token || !data?.user) {
+        return {
+          success: false,
+          user: null,
+          token: null,
+          message:
+            "Login failed. Invalid server response.",
+        };
+      }
 
       setUser(data.user);
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data.user)
+      );
 
       return {
         success: true,
         user: data.user,
         token: data.token,
+        message:
+          data.message ||
+          "Login successful.",
       };
-
     } catch (error) {
+      console.error(
+        "Login error:",
+        error
+      );
 
       return {
         success: false,
+        user: null,
+        token: null,
         message:
-          error.message ||
+          error?.message ||
           "Login failed.",
       };
-
+    } finally {
+      setLoadingAuth(false);
     }
   };
-
 
   // ==========================================
   // UPDATE USER
   // ==========================================
 
   const updateUser = (updatedUser) => {
-
     if (!updatedUser) {
       return;
     }
 
-    // Update React state
     setUser(updatedUser);
-
-    // IMPORTANT:
-    // Save updated user so refresh doesn't
-    // revert to the old profile.
 
     localStorage.setItem(
       "user",
@@ -112,27 +228,38 @@ export function AuthProvider({ children }) {
     );
   };
 
-
   // ==========================================
   // LOGOUT
   // ==========================================
 
-  const logout = () => {
+  const logout = async () => {
+    setLoadingAuth(true);
 
-    logoutUser();
+    try {
+      /*
+       * Currently logoutUser() is synchronous
+       * because it only removes localStorage data.
+       *
+       * Keeping this inside an async function makes
+       * the AuthContext ready if a backend logout
+       * request is added later.
+       */
 
-    setUser(null);
+      logoutUser();
+
+      setUser(null);
+    } finally {
+      setLoadingAuth(false);
+    }
   };
 
-
   // ==========================================
-  // AUTH STATUS
+  // AUTHENTICATION STATUS
   // ==========================================
 
   const isAuthenticated =
-    !!user &&
-    !!localStorage.getItem("token");
-
+    Boolean(user) &&
+    Boolean(localStorage.getItem("token"));
 
   // ==========================================
   // CONTEXT
@@ -147,6 +274,12 @@ export function AuthProvider({ children }) {
         logout,
         updateUser,
         isAuthenticated,
+
+        // Initial session/profile loading
+        loadingUser,
+
+        // Real login/logout operation loading
+        loadingAuth,
       }}
     >
       {children}
@@ -154,11 +287,18 @@ export function AuthProvider({ children }) {
   );
 }
 
-
 // ==========================================
-// useAuth HOOK
+// useAuth
 // ==========================================
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      "useAuth must be used inside AuthProvider"
+    );
+  }
+
+  return context;
 }

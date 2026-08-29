@@ -7,7 +7,14 @@ import {
   deleteService,
 } from "../../services/serviceService";
 
-// Images from client/src/assets/images
+import Loader from "../../components/common/Loader";
+import ErrorMessage from "../../components/common/ErrorMessage";
+import Alert from "../../components/common/Alert";
+
+// ==========================================
+// LOCAL SERVICE IMAGES
+// ==========================================
+
 import homeCleaning from "../../assets/images/home-cleaning.jpg";
 import acRepair from "../../assets/images/ac-repair.jpg";
 import plumbing from "../../assets/images/plumbing.jpg";
@@ -21,7 +28,10 @@ import gardening from "../../assets/images/gardening.jpg";
 import smartHome from "../../assets/images/smart-home-services.jpg";
 import packersMovers from "../../assets/images/packers-movers.jpg";
 
-// Map service names to actual imported images
+// ==========================================
+// SERVICE IMAGE MAP
+// ==========================================
+
 const serviceImages = {
   "Home Cleaning": homeCleaning,
   "AC Repair": acRepair,
@@ -37,15 +47,21 @@ const serviceImages = {
   "Packers & Movers": packersMovers,
 };
 
+// ==========================================
+// GET SERVICE IMAGE
+// ==========================================
+
 function getServiceImage(service) {
-  // If MongoDB has an image URL, use it
   if (service.image) {
     return service.image;
   }
 
-  // Otherwise use the local TrueFix image
   return serviceImages[service.name] || null;
 }
+
+// ==========================================
+// COMPONENT
+// ==========================================
 
 function ManageServices() {
   const [services, setServices] = useState([]);
@@ -77,8 +93,11 @@ function ManageServices() {
 
       const data = await getServices();
 
-      // Your backend currently returns the array directly
-      setServices(Array.isArray(data) ? data : []);
+      setServices(
+        Array.isArray(data)
+          ? data
+          : data.services || []
+      );
     } catch (error) {
       console.error("Fetch services error:", error);
 
@@ -95,15 +114,23 @@ function ManageServices() {
   }, []);
 
   // ==========================================
-  // INPUT CHANGE
+  // HANDLE INPUT
   // ==========================================
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (event) => {
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
+    setFormData((previous) => ({
+      ...previous,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
     }));
 
     setError("");
@@ -127,37 +154,38 @@ function ManageServices() {
   };
 
   // ==========================================
-  // EDIT
+  // EDIT SERVICE
   // ==========================================
 
   const handleEdit = (service) => {
-  setEditingId(service._id);
+    setEditingId(service._id);
 
-  const localImage = serviceImages[service.name] || "";
+    const localImage =
+      serviceImages[service.name] || "";
 
-  setFormData({
-    name: service.name || "",
-    description: service.description || "",
-    price: service.price || "",
-    image: service.image || localImage,
-    active: service.active !== false,
-  });
+    setFormData({
+      name: service.name || "",
+      description: service.description || "",
+      price: service.price ?? "",
+      image: service.image || localImage,
+      active: service.active !== false,
+    });
 
-  setSuccess("");
-  setError("");
+    setSuccess("");
+    setError("");
 
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
-  });
-};
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   // ==========================================
-  // SUBMIT
+  // SUBMIT FORM
   // ==========================================
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     setError("");
     setSuccess("");
@@ -189,24 +217,34 @@ function ManageServices() {
           formData
         );
 
-        setServices((prev) =>
-          prev.map((service) =>
+        const updatedService =
+          data.service || data;
+
+        setServices((previous) =>
+          previous.map((service) =>
             service._id === editingId
-              ? data.service
+              ? updatedService
               : service
           )
         );
 
-        setSuccess("Service updated successfully.");
+        setSuccess(
+          "Service updated successfully."
+        );
       } else {
         const data = await createService(formData);
 
-        setServices((prev) => [
-          data.service,
-          ...prev,
+        const newService =
+          data.service || data;
+
+        setServices((previous) => [
+          newService,
+          ...previous,
         ]);
 
-        setSuccess("Service added successfully.");
+        setSuccess(
+          "Service added successfully."
+        );
       }
 
       resetForm();
@@ -222,7 +260,7 @@ function ManageServices() {
   };
 
   // ==========================================
-  // DELETE
+  // DELETE SERVICE
   // ==========================================
 
   const handleDelete = async (id) => {
@@ -230,7 +268,9 @@ function ManageServices() {
       "Are you sure you want to delete this service?"
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
       setError("");
@@ -238,11 +278,15 @@ function ManageServices() {
 
       await deleteService(id);
 
-      setServices((prev) =>
-        prev.filter((service) => service._id !== id)
+      setServices((previous) =>
+        previous.filter(
+          (service) => service._id !== id
+        )
       );
 
-      setSuccess("Service deleted successfully.");
+      setSuccess(
+        "Service deleted successfully."
+      );
     } catch (error) {
       console.error("Delete service error:", error);
 
@@ -258,15 +302,10 @@ function ManageServices() {
 
   if (loading) {
     return (
-      <section className="min-h-screen bg-gray-50 py-12 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="w-10 h-10 mx-auto border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin" />
-
-          <p className="text-gray-500 mt-4">
-            Loading services...
-          </p>
-        </div>
-      </section>
+      <Loader
+        text="Loading services..."
+        fullScreen
+      />
     );
   }
 
@@ -275,7 +314,7 @@ function ManageServices() {
   // ==========================================
 
   return (
-    <section className="min-h-screen bg-gray-50 py-10 px-4">
+    <section className="min-h-full bg-gray-50 py-8 sm:py-10 px-4">
       <div className="max-w-7xl mx-auto">
 
         {/* HEADER */}
@@ -297,16 +336,23 @@ function ManageServices() {
         {/* ERROR */}
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
-            {error}
+          <div className="mb-6">
+            <ErrorMessage
+              message={error}
+              onRetry={fetchServices}
+            />
           </div>
         )}
 
         {/* SUCCESS */}
 
         {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 rounded-xl p-4">
-            {success}
+          <div className="mb-6">
+            <Alert
+              type="success"
+              message={success}
+              onClose={() => setSuccess("")}
+            />
           </div>
         )}
 
@@ -314,9 +360,10 @@ function ManageServices() {
             ADD / EDIT FORM
         ========================================== */}
 
-        <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
+        <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6 mb-8">
 
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+
             <div>
               <h2 className="text-xl font-bold text-blue-900">
                 {editingId
@@ -335,7 +382,7 @@ function ManageServices() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="text-gray-600 hover:text-gray-900 font-semibold"
+                className="self-start text-gray-600 hover:text-gray-900 font-semibold"
               >
                 Cancel Edit
               </button>
@@ -360,7 +407,7 @@ function ManageServices() {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="e.g. Home Cleaning"
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-orange-500"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
               />
             </div>
 
@@ -378,7 +425,7 @@ function ManageServices() {
                 value={formData.price}
                 onChange={handleChange}
                 placeholder="499"
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-orange-500"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
               />
             </div>
 
@@ -395,7 +442,7 @@ function ManageServices() {
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="Describe the service..."
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none resize-none focus:border-orange-500"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none resize-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
               />
             </div>
 
@@ -412,7 +459,7 @@ function ManageServices() {
                 value={formData.image}
                 onChange={handleChange}
                 placeholder="Optional image URL"
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-orange-500"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
               />
 
               <p className="text-xs text-gray-500 mt-2">
@@ -428,7 +475,7 @@ function ManageServices() {
                 name="active"
                 checked={formData.active}
                 onChange={handleChange}
-                className="w-5 h-5"
+                className="w-5 h-5 accent-orange-500"
               />
 
               <label className="font-semibold text-gray-700">
@@ -438,7 +485,8 @@ function ManageServices() {
 
             {/* BUTTONS */}
 
-            <div className="md:col-span-2 flex gap-3">
+            <div className="md:col-span-2 flex flex-col sm:flex-row gap-3">
+
               <button
                 type="submit"
                 disabled={saving}
@@ -459,13 +507,13 @@ function ManageServices() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-6 py-3 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300"
+                  disabled={saving}
+                  className="px-6 py-3 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
                 >
                   Clear
                 </button>
               )}
             </div>
-
           </form>
         </div>
 
@@ -475,7 +523,7 @@ function ManageServices() {
 
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
 
-          <div className="p-6 border-b">
+          <div className="p-5 sm:p-6 border-b">
             <h2 className="text-xl font-bold text-blue-900">
               Current Services
             </h2>
@@ -488,6 +536,7 @@ function ManageServices() {
 
           {services.length === 0 ? (
             <div className="p-10 text-center">
+
               <div className="text-5xl mb-4">
                 🛠️
               </div>
@@ -501,14 +550,13 @@ function ManageServices() {
               </p>
             </div>
           ) : (
-            <div className="p-6">
-
-              {/* SERVICE CARDS */}
+            <div className="p-5 sm:p-6">
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
                 {services.map((service) => {
-                  const image = getServiceImage(service);
+                  const image =
+                    getServiceImage(service);
 
                   return (
                     <div
@@ -568,41 +616,40 @@ function ManageServices() {
 
                         {/* ACTIONS */}
 
-                        <div className="flex gap-3 mt-5">
+                        <div className="flex flex-col sm:flex-row gap-3 mt-5">
 
                           <button
+                            type="button"
                             onClick={() =>
                               handleEdit(service)
                             }
-                            className="flex-1 bg-blue-100 text-blue-700 px-4 py-2.5 rounded-lg font-semibold hover:bg-blue-200"
+                            className="flex-1 bg-blue-100 text-blue-700 px-4 py-2.5 rounded-lg font-semibold hover:bg-blue-200 transition"
                           >
                             Edit
                           </button>
 
                           <button
+                            type="button"
                             onClick={() =>
-                              handleDelete(service._id)
+                              handleDelete(
+                                service._id
+                              )
                             }
-                            className="flex-1 bg-red-100 text-red-700 px-4 py-2.5 rounded-lg font-semibold hover:bg-red-200"
+                            className="flex-1 bg-red-100 text-red-700 px-4 py-2.5 rounded-lg font-semibold hover:bg-red-200 transition"
                           >
                             Delete
                           </button>
 
                         </div>
-
                       </div>
-
                     </div>
                   );
                 })}
 
               </div>
-
             </div>
           )}
-
         </div>
-
       </div>
     </section>
   );
